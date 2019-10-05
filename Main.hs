@@ -6,5 +6,5 @@ main = do
         Left s -> print s
         Right toks -> loop toks
             where loop [] = return ()
-                  loop (x:xs) = do print x
+                  loop (x:xs) = do printTokenPos x
                                    loop xs
