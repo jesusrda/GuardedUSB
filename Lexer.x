@@ -1,5 +1,5 @@
 {
-module Main (main) where
+module Lexer (scanner) where
 import Tokens
 }
 
@@ -121,12 +121,5 @@ scanner str =
                 return (tkPos : toks)
     in runAlex str loop 
 
-main = do
-    s <- getContents
-    case scanner s of
-        Left s -> print s
-        Right toks -> loop toks
-            where loop [] = return ()
-                  loop (x:xs) = do print x
-                                   loop xs
+
 }
