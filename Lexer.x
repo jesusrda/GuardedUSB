@@ -83,10 +83,12 @@ tokens :-
 <stringSt>  .                                   {addCurrentChar}                        -- Insert any char to string
 
         -- Invalid characters
-<0>         .                                   {skip}  
+<0>         .                                   {pushInvalid}  
 
 
 {
+type LexerError = String
+
 -- Initial State
 stateInitial :: Int
 stateInitial = 0
@@ -98,15 +100,17 @@ alexEOF = return (TkEOF, undefined, undefined)
 -- User state
 data AlexUserState = AlexUserState
                     {
-                        lexerStringState :: Bool  ,
-                        lexerStringValue :: String
+                        lexerStringState :: Bool,
+                        lexerStringValue :: String,
+                        lexerErrors :: [LexerError]
                     }
 
 alexInitUserState :: AlexUserState
 alexInitUserState = AlexUserState
                     {
                         lexerStringState = False ,
-                        lexerStringValue = ""
+                        lexerStringValue = "" ,
+                        lexerErrors = []
                     }
 
 -- Push Tokens
@@ -118,6 +122,15 @@ pushNum (AlexPn _ l c, _, _, inp) len = return $ (TkNum $ read $ take len inp, l
 
 pushId :: AlexInput -> Int -> Alex TokenPos
 pushId (AlexPn _ l c, _, _, inp) len = return $ (TkId $ take len inp, l, c)
+
+pushInvalid :: AlexInput -> Int -> Alex TokenPos
+pushInvalid (AlexPn _ l c, _, _, inp) len = 
+                                            do
+                                                ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                                                alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
+                                                alexMonadScan
+                                            where errorMsg = "error: Unexpected char '" ++ (take len inp) ++ "' at line "
+                                                                ++ show l ++ " column " ++ show c
 
 printTokenPos :: TokenPos -> IO ()
 printTokenPos (tk, l, c) = putStrLn $ show tk ++ " " ++ show l ++ " " ++ show c 
@@ -142,7 +155,11 @@ scanner str =
     let loop = do
         tkPos@(tok,l,c) <- alexMonadScan
         if tok == TkEOF
-        then return []
+        then do
+                AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                if null lexErr
+                then return []
+                else alexError $ unlines $ reverse lexErr
         else do toks <- loop
                 return (tkPos : toks)
     in runAlex str loop 

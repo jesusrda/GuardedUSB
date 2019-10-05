@@ -2,11 +2,11 @@ import Lexer
 
 main = do
     f <- getLine
-    print $ f++"\n"
+    putStrLn f
     s <- readFile f
-    print $ s++"\n"
+    putStrLn s
     case scanner s of
-        Left s -> print s
+        Left s -> putStr s
         Right toks -> loop toks
             where loop [] = return ()
                   loop (x:xs) = do printTokenPos x
