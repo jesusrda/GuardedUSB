@@ -1,5 +1,5 @@
 {
-module Lexer () where
+module Main (main) where
 }
 
 %wrapper "monad"
@@ -208,6 +208,22 @@ alexEOF = return (TkEOF, undefined, undefined)
 pushTk :: Token -> AlexInput -> Int -> Alex TokenPos
 pushTk tok (AlexPn _ l c, _, _, _) len = return (tok, l, c)
 
+scanner :: String -> Either String [TokenPos]
+scanner str = 
+    let loop = do
+        tkPos@(tok,l,c) <- alexMonadScan
+        if tok == TkEOF
+        then return []
+        else do toks <- loop
+                return (tkPos : toks)
+    in runAlex str loop 
+
 main = do
-    print "Hola jejeje"
+    s <- getContents
+    case scanner s of
+        Left s -> print s
+        Right toks -> loop toks
+            where loop [] = return ()
+                  loop (x:xs) = do print x
+                                   loop xs
 }
