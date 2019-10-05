@@ -3,7 +3,7 @@ module Main (main) where
 import Tokens
 }
 
-%wrapper "monad"
+%wrapper "monadUserState"
 
 $digit = 0-9
 $Alpha = [a-zA-Z]
@@ -86,12 +86,27 @@ tokens :-
 
 
 {
+-- Initial State
+stateInitial :: Int
+stateInitial = 0
 
-state_initial :: Int
-state_initial = 0
-
+-- Definition needed by Alex
 alexEOF :: Alex TokenPos
 alexEOF = return (TkEOF, undefined, undefined)
+
+-- User state
+data AlexUserState = AlexUserState
+                    {
+                        lexerStringState :: Bool  ,
+                        lexerStringValue :: String
+                    }
+
+alexInitUserState :: AlexUserState
+alexInitUserState = AlexUserState
+                    {
+                        lexerStringState = False ,
+                        lexerStringValue = ""
+                    }
 
 pushTk :: Token -> AlexInput -> Int -> Alex TokenPos
 pushTk tok (AlexPn _ l c, _, _, _) len = return (tok, l, c)
