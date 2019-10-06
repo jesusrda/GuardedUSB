@@ -1,5 +1,5 @@
 {
-module Lexer (scanner, printTokenPos) where
+module Lexer (scanner, showTokenPos) where
 import Tokens
 }
 
@@ -74,11 +74,11 @@ tokens :-
 <0>         $digit+                             {pushNum}
 <0>         "true"                              {pushTk TkTrue}
 <0>         "false"                             {pushTk TkFalse}
-<0>         \"                                  {enterString `andBegin` stringSt}        -- Start string
+<0>         \"                                  {enterString `andBegin` stringSt}       -- Start string
 <stringSt>  \\n                                 {addChar '\n'}                          -- Insert \n to string
 <stringSt>  \\\\                                {addChar '\\'}                          -- Insert '\' to string
 <stringSt>  \\\"                                {addChar '\"'}
-<stringSt>  \\                                  {skip}                                  -- Invalid escape
+<stringSt>  \\                                  {pushInvalid}                           -- Invalid escape
 <stringSt>  \"                                  {leaveString `andBegin` stateInitial}   -- Leave string
 <stringSt>  .                                   {addCurrentChar}                        -- Insert any char to string
 
@@ -132,8 +132,8 @@ pushInvalid (AlexPn _ l c, _, _, inp) len =
                                             where errorMsg = "error: Unexpected char '" ++ (take len inp) ++ "' at line "
                                                                 ++ show l ++ " column " ++ show c
 
-printTokenPos :: TokenPos -> IO ()
-printTokenPos (tk, l, c) = putStrLn $ show tk ++ " " ++ show l ++ " " ++ show c 
+showTokenPos :: TokenPos -> String
+showTokenPos (tk, l, c) = show tk ++ " " ++ show l ++ " " ++ show c 
 
 -- String mode
 enterString :: AlexAction TokenPos
