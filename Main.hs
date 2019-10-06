@@ -1,7 +1,10 @@
 import Lexer
 
 main = do
-    s <- getContents
+    f <- getLine
+    print $ f++"\n"
+    s <- readFile f
+    print $ s++"\n"
     case scanner s of
         Left s -> print s
         Right toks -> loop toks
