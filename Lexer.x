@@ -80,7 +80,8 @@ tokens :-
 <stringSt>  \\\"                                {addChar '\"'}
 <stringSt>  \\                                  {pushInvalid}                           -- Invalid escape
 <stringSt>  \"                                  {leaveString `andBegin` stateInitial}   -- Leave string
-<stringSt>  .                                   {addCurrentChar}                        -- Insert any char to string
+<stringSt>  $printable                          {addCurrentChar}                        -- Insert any printable char to string
+<stringSt>  .                                   {pushInvalid}                           -- Invalid not-printable char
 
         -- Invalid characters
 <0>         .                                   {pushInvalid}  
@@ -129,7 +130,7 @@ pushInvalid (AlexPn _ l c, _, _, inp) len =
                                                 ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
                                                 alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
                                                 alexMonadScan
-                                            where errorMsg = "error: Unexpected char '" ++ (take len inp) ++ "' at line "
+                                            where errorMsg = "Error: Unexpected character \"" ++ (take len inp) ++ "\" in row "
                                                                 ++ show l ++ " column " ++ show c
 
 showTokenPos :: TokenPos -> String
@@ -137,17 +138,51 @@ showTokenPos (tk, l, c) = show tk ++ " " ++ show l ++ " " ++ show c
 
 -- String mode
 enterString :: AlexAction TokenPos
-enterString _ _ = undefined
+enterString _ _ = do
+                    setStringState True
+                    setStringValue []
+                    alexMonadScan
 
 addChar :: Char -> AlexAction TokenPos
-addChar _ _ _ = undefined
+addChar c _ _ =  do
+                    addCharStringValue c
+                    alexMonadScan
 
 addCurrentChar :: AlexAction TokenPos
-addCurrentChar _ _ = undefined
+addCurrentChar (_, _, _, inp) _ = do
+                                    addCharStringValue $ head inp
+                                    alexMonadScan
 
 leaveString :: AlexAction TokenPos
-leaveString _ _ = undefined
+leaveString (AlexPn _ l c, _, _, _) _ = do
+                                            str <- getStringValue
+                                            setStringState False
+                                            return $ (TkString $ reverse str, l, c - (length str) - 2)
 
+setStringState :: Bool -> Alex ()
+setStringState state = Alex setState
+    where
+        setState s = Right (s{alex_ust = (alex_ust s){lexerStringState = state} }, ())
+
+setStringValue :: String -> Alex ()
+setStringValue string = Alex setValue
+    where
+        setValue s = Right (s{alex_ust = (alex_ust s){lexerStringValue = string} }, ())
+
+addCharStringValue :: Char -> Alex ()
+addCharStringValue char = Alex addChar
+    where
+        addChar s = Right (s{alex_ust = (alex_ust s){lexerStringValue = char:lexerStringValue (alex_ust s)} }, ())
+        
+getStringValue :: Alex String
+getStringValue = Alex getString 
+    where
+        getString s@AlexState{alex_ust = usSt} = Right (s, lexerStringValue usSt)
+
+getStringState :: Alex Bool
+getStringState = Alex getState 
+    where
+        getState s@AlexState{alex_ust = usSt} = Right (s, lexerStringState usSt)
 
 -- Scanner
 scanner :: String -> Either String [TokenPos]
@@ -156,10 +191,14 @@ scanner str =
         tkPos@(tok,l,c) <- alexMonadScan
         if tok == TkEOF
         then do
-                AlexUserState{lexerErrors = lexErr} <- alexGetUserState
-                if null lexErr
-                then return []
-                else alexError $ unlines $ reverse lexErr
+                stringOpen <- getStringState
+                if stringOpen
+                then alexError $ "Error: EOF reached while scanning string"
+                else do
+                    AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                    if null lexErr
+                    then return []
+                    else alexError $ unlines $ reverse lexErr
         else do toks <- loop
                 return (tkPos : toks)
     in runAlex str loop 
