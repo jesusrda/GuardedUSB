@@ -10,4 +10,4 @@ main = do
 	    case scanner s of
 	        Left s -> putStr s
 	        Right toks -> putStr $ unlines $ map showTokenPos toks
-	else putStrLn "El archivo dado no tiene la terminacion correcta."
+	else putStrLn "Error: Wrong Filetype. Only .gusb files allowed"
