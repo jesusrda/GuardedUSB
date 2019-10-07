@@ -68,7 +68,7 @@ tokens :-
 <0>         \]\|                                {pushTk TkCloseBlock}
 
         -- Identifiers
-<0>         $Alpha [$Alpha $digit \_]*          {pushId}
+<0>         $Alpha[$Alpha $digit \_]*          {pushId}
 
         -- Constants
 <0>         $digit+                             {pushNum}
@@ -80,8 +80,9 @@ tokens :-
 <stringSt>  \\\"                                {addChar '\"'}
 <stringSt>  \\                                  {pushInvalid}                           -- Invalid escape
 <stringSt>  \"                                  {leaveString `andBegin` stateInitial}   -- Leave string
+<stringSt>  \n+\r?\r+\n?                        {pushInvalidBreak}                      -- Invalid Break Lines                             
 <stringSt>  $printable                          {addCurrentChar}                        -- Insert any printable char to string
-<stringSt>  .                                   {pushInvalid}                           -- Invalid not-printable char
+<stringSt>  .                                   {pushInvalidNPrint}                     -- Invalid Not Printable chars
 
         -- Invalid characters
 <0>         .                                   {pushInvalid}  
@@ -126,12 +127,30 @@ pushId (AlexPn _ l c, _, _, inp) len = return $ (TkId $ take len inp, l, c)
 
 pushInvalid :: AlexInput -> Int -> Alex TokenPos
 pushInvalid (AlexPn _ l c, _, _, inp) len = 
-                                            do
+                                            do  
                                                 ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
                                                 alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
                                                 alexMonadScan
                                             where errorMsg = "Error: Unexpected character \"" ++ (take len inp) ++ "\" in row "
                                                                 ++ show l ++ " column " ++ show c
+
+pushInvalidBreak :: AlexInput -> Int -> Alex TokenPos
+pushInvalidBreak (AlexPn _ l c, _, _, inp) len = 
+                                                do  
+                                                    ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                                                    alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
+                                                    alexMonadScan
+                                                where errorMsg = "Error: Unexpected breakline in row "
+                                                                    ++ show l ++ " column " ++ show c
+
+pushInvalidNPrint :: AlexInput -> Int -> Alex TokenPos
+pushInvalidNPrint (AlexPn _ l c, _, _, inp) len = 
+                                                do  
+                                                    ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                                                    alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
+                                                    alexMonadScan
+                                                where errorMsg = "Error: Unexpected control char in row "
+                                                                    ++ show l ++ " column " ++ show c                                                                    
 
 showTokenPos :: TokenPos -> String
 showTokenPos (tk, l, c) = show tk ++ " " ++ show l ++ " " ++ show c 
@@ -185,20 +204,29 @@ getStringState = Alex getState
         getState s@AlexState{alex_ust = usSt} = Right (s, lexerStringState usSt)
 
 -- Scanner
+
+checkOpenString :: Alex ()
+checkOpenString = do 
+                    stringOpen <- getStringState
+                    if stringOpen 
+                    then do 
+                            ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                            alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
+                    else
+                        return ()
+                    where errorMsg = "Error: EOF reached while scanning string"
+
 scanner :: String -> Either String [TokenPos]
 scanner str = 
     let loop = do
         tkPos@(tok,l,c) <- alexMonadScan
         if tok == TkEOF
         then do
-                stringOpen <- getStringState
-                if stringOpen
-                then alexError $ "Error: EOF reached while scanning string"
-                else do
-                    AlexUserState{lexerErrors = lexErr} <- alexGetUserState
-                    if null lexErr
-                    then return []
-                    else alexError $ unlines $ reverse lexErr
+                checkOpenString
+                AlexUserState{lexerErrors = lexErr} <- alexGetUserState
+                if null lexErr
+                then return []
+                else alexError $ unlines $ reverse lexErr
         else do toks <- loop
                 return (tkPos : toks)
     in runAlex str loop 
