@@ -135,7 +135,7 @@ pushInvalid (AlexPn _ l c, _, _, inp) len =
                                                                 ++ show l ++ " column " ++ show c
 
 pushInvalidBreak :: AlexInput -> Int -> Alex TokenPos
-pushInvalidBreak (AlexPn _ l c, _, _, inp) len = 
+pushInvalidBreak (AlexPn _ l c, _, _, inp) _ = 
                                                 do  
                                                     ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
                                                     alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
@@ -144,7 +144,7 @@ pushInvalidBreak (AlexPn _ l c, _, _, inp) len =
                                                                     ++ show l ++ " column " ++ show c
 
 pushInvalidNPrint :: AlexInput -> Int -> Alex TokenPos
-pushInvalidNPrint (AlexPn _ l c, _, _, inp) len = 
+pushInvalidNPrint (AlexPn _ l c, _, _, inp) _ = 
                                                 do  
                                                     ust@AlexUserState{lexerErrors = lexErr} <- alexGetUserState
                                                     alexSetUserState $ ust{lexerErrors = errorMsg : lexErr}
@@ -203,8 +203,6 @@ getStringState = Alex getState
     where
         getState s@AlexState{alex_ust = usSt} = Right (s, lexerStringState usSt)
 
--- Scanner
-
 checkOpenString :: Alex ()
 checkOpenString = do 
                     stringOpen <- getStringState
@@ -215,7 +213,8 @@ checkOpenString = do
                     else
                         return ()
                     where errorMsg = "Error: EOF reached while scanning string"
-
+                    
+-- Scanner
 scanner :: String -> Either String [TokenPos]
 scanner str = 
     let loop = do
@@ -231,4 +230,4 @@ scanner str =
                 return (tkPos : toks)
     in runAlex str loop 
 
-}
+}   
