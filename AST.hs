@@ -1,0 +1,16 @@
+module AST where
+
+data BLOCK = BLOCK INSTRUCTIONS 
+		   | BLOCKD DECLARES INSTRUCTIONS
+
+data DECLARES = DECLARES DECLARE
+			  | SEQUENCE DECLARE DECLARES
+
+data DECLARE = DECLARE [ID] [TYPE]
+
+newtype ID = ID String
+
+data TYPE = INT 
+		  | BOOL
+		  | ARRAY Int Int
+

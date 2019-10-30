@@ -65,10 +65,39 @@ import Tokens
 	']|'		{ (TkCloseBlock,_,_) }
 
 	-- Other Tokens
-	varId 		{ (TkId _,_,_) }
-	n 			{ (TkNum _,_,_) }
-	s 			{ (TkString _,_,_) }
+	varID		{ (TkId $$,_,_) }
+	n 			{ (TkNum $$,_,_) }
+	s 			{ (TkString $$,_,_) }
 	true 		{ (TkTrue,_,_) }
 	false 		{ (TkFalse,_,_) }
 
+
 %%
+
+BLOCK :: { AST.BLOCK }
+BLOCK : DECLARATION INSTRUCTIONS		{ AST.BLOCKD $1 $2 }
+	  | INSTRUCTIONS	 				{ AST.BLOCK $1 }
+
+DECLARATION :: { AST.DECLARES }
+DECLARATION : declare DECLARES 			{ $1 }
+
+DECLARES :: { AST.DECLARES }
+DECLARES : DECLARE 						{ AST.DECLARES $1 }
+		 | DECLARE ';' DECLARES 		{ AST.SEQUENCE $1 $3 }
+
+DECLARE :: { AST.DECLARE }
+DECLARE : IDLIST ':' TYPELIST 			{ AST.DECLARE $1 $3 }
+
+IDLIST :: { [AST.ID] }
+IDLIST : varID							{ [AST.ID] }
+	   | varID ',' IDLIST 				{ (AST.ID $1) : $3  }
+
+TYPELIST :: { [AST.TYPE] }
+TYPELIST : TYPE 						{ [$1] }
+		 | TYPE ',' TYPELIST 			{ $1 : $3 }
+
+TYPE :: { AST.TYPE }
+TYPE : int 								{ AST.INT }
+	 | bool 							{ AST.BOOL }
+	 | array '[' n '..' n ']' 			{ AST.ARRAY $3 $5 }
+
