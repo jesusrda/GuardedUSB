@@ -20,7 +20,6 @@ import Tokens
     print       { (TkPrint,_,_) }
     println     { (TkPrintLn,_,_) }
     if          { (TkIf,_,_) }
-    else        { (TkElse,_,_) }
     fi          { (TkFi,_,_) }
     for         { (TkFor,_,_) }
     to          { (TkTo,_,_) }

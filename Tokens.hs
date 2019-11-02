@@ -10,7 +10,6 @@ data Token =
       | TkPrint
       | TkPrintln
       | TkIf
-      | TkElse
       | TkFi
       | TkFor
       | TkTo

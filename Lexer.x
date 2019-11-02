@@ -23,7 +23,6 @@ tokens :-
 <0>         "print"                             {pushTk TkPrint}
 <0>         "println"                           {pushTk TkPrintln}
 <0>         "if"                                {pushTk TkIf}
-<0>         "else"                              {pushTk TkElse}
 <0>         "fi"                                {pushTk TkFi}
 <0>         "for"                               {pushTk TkFor}
 <0>         "to"                                {pushTk TkTo}
