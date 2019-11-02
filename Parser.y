@@ -71,6 +71,14 @@ import Tokens
     true        { (TkTrue,_,_) }
     false       { (TkFalse,_,_) }
 
+%left '==' '!='
+%left '\/'
+%left '/\'
+%left '!'
+%noassoc '<' '>' '<=' '>='
+%left '+' '-'
+%left '*' '/' '%'
+%left NEG
 
 %%
 
@@ -80,13 +88,13 @@ BLOCK : '|[' declare DECLARES INSTRUCTIONS ']|' { AST.BLOCKD $2 $3 }
 
 DECLARES :: { AST.DECLARES }
 DECLARES : DECLARE                              { AST.DECLARES $1 }
-         | DECLARE ';' DECLARES                 { AST.SEQUENCE $1 $3 }
+         | DECLARE ';' DECLARES                 { AST.SEQUENCED $1 $3 }
 
 DECLARE :: { AST.DECLARE }
 DECLARE : IDLIST ':' TYPELIST                   { AST.DECLARE $1 $3 }
 
 IDLIST :: { [AST.ID] }
-IDLIST : varID                                  { [AST.ID] }
+IDLIST : varID                                  { [AST.ID $1] }
        | varID ',' IDLIST                       { (AST.ID $1) : $3  }
 
 TYPELIST :: { [AST.TYPE] }
@@ -102,4 +110,60 @@ INSTRUCTIONS :: { AST.INSTRUCTIONS }
 INSTRUCTIONS : INSTRUCTION                      { AST.INST $1 }
              | INSTRUCTION ';' INSTRUCTIONS     { AST.SEQUENCE $1 $3 }
 
-INSTRUCTION :: 
+INSTRUCTION :: { AST.INSTRUCTION }
+INSTRUCTION : BLOCK                             { AST.BLOCKINST $1 }
+            | varID ':=' EXPR                   { AST.ASSIGN $1 $3 }
+            | read varID                        { AST.READ $2 }
+            | print PRINTEXP                    { AST.PRINT $2 }
+            | println PRINTEXP                  { AST.PRINTLN $2 }
+            | IFINST                            { AST.IF $1 }
+            | FORINST                           { AST.FOR $1 }
+            | DOINST                            { AST.DO $1 }
+
+EXPR :: { AST.EXPRESSION }
+EXPR : INTEXP                                   { AST.INTEXP $1 }
+     | BOOLEXP                                  { AST.BOOLEXP $1 }
+     | ARRAYEXP                                 { AST.ARRAYEXP $1 }
+     | INTLIST                                  { AST.INTLIST $1 }
+
+INTEXP :: { AST.INTEXPRESSION }
+INTEXP : INTEXP '+' INTEXP                      { AST.SUM $1 $3 }
+       | INTEXP '-' INTEXP                      { AST.MINUS $1 $3 }
+       | INTEXP '*' INTEXP                      { AST.MULT $1 $3 }
+       | INTEXP '/' INTEXP                      { AST.DIV $1 $3 }
+       | INTEXP '%' INTEXP                      { AST.MOD $1 $3 }
+       | '(' INTEXP ')'                         { $2 }
+       | '-' INTEXP %prec NEG                   { AST.NEG $2 }
+       | ARRAYEXP '[' INTEXP ']'                { AST.ARRCONSULT $1 $3 }
+       | size '(' ARRAYEXP ')'                  { AST.SIZE $3 }
+       | atoi '(' ARRAYEXP ')'                  { AST.ATOI $3 }
+       | min '(' ARRAYEXP ')'                   { AST.MIN $3 }
+       | max '(' ARRAYEXP ')'                   { AST.MAX $3 }
+       | varID                                  { AST.INTID $1 }
+       | n                                      { AST.INTLITERAL $1 }
+
+BOOLEXP :: { AST.BOOLEXPRESSION }
+BOOLEXP : INTEXP '==' INTEXP                    { AST.EQINT $1 $3 }
+        | INTEXP '!=' INTEXP                    { AST.NEQINT $1 $3 }
+        | INTEXP '<=' INTEXP                    { AST.LEQ $1 $3 }
+        | INTEXP '>=' INTEXP                    { AST.GEQ $1 $3 }
+        | INTEXP '<' INTEXP                     { AST.LESS $1 $3 }
+        | INTEXP '>' INTEXP                     { AST.GREATER $1 $3 }
+        | BOOLEXP '==' BOOLEXP                  { AST.EQBOOL $1 $3 }
+        | BOOLEXP '!=' BOOLEXP                  { AST.NEQBOOL $1 $3 }
+        | BOOLEXP '\/' BOOLEXP                  { AST.OR $1 $3 }
+        | BOOLEXP '/\' BOOLEXP                  { AST.AND $1 $3 }
+        | '!' BOOLEXP                           { AST.NOT $1 $3 }
+        | '(' BOOLEXP ')'                       { $2 }
+        | true                                  { AST.TRUE }
+        | false                                 { AST.FALSE }
+        | varID                                 { AST.BOOLID $1}
+
+ARRAYEXP :: { AST.ARRAYEXPRESSION }
+ARRAYEXP : ARRAYEXP '(' INTEXP ':' INTEXP ')'   { AST.ARRAYMOD $1 $3 $5 }
+         | varID                                { AST.ARRAYID $1 }
+
+INTLIST :: { [AST.INTEXP] }
+INTLIST : INTEXP                                { [$1] }
+        | INTEXP ',' INTLIST                    { $1 : $3 }
+
