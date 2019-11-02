@@ -19,10 +19,11 @@ import qualified AST
     declare     { (TkDeclare,_,_) }
     read        { (TkRead,_,_) }
     print       { (TkPrint,_,_) }
-    println     { (TkPrintLn,_,_) }
+    println     { (TkPrintln,_,_) }
     if          { (TkIf,_,_) }
     fi          { (TkFi,_,_) }
     for         { (TkFor,_,_) }
+    in          { (TkIn,_,_) }
     to          { (TkTo,_,_) }
     rof         { (TkRof,_,_) }
     do          { (TkDo,_,_) }
@@ -45,8 +46,8 @@ import qualified AST
     '*'         { (TkMult,_,_) }
     '/'         { (TkDiv,_,_) }
     '%'         { (TkMod,_,_) }
-    '\/'        { (TkOr,_,_) }
-    '/\'        { (TkAnd,_,_) }
+    'v'         { (TkOr,_,_) }
+    '^'         { (TkAnd,_,_) }
     '!'         { (TkNot,_,_) }
     '=='        { (TkEqual,_,_) }
     '!='        { (TkNEqual,_,_) }
@@ -72,23 +73,26 @@ import qualified AST
     false       { (TkFalse,_,_) }
 
 %left '[]'
-%noassoc ':='
+%left ';'
+%nonassoc ':='
 %left '||'
+%left ':'
 %left ','
 %left '==' '!='
-%left '\/'
-%left '/\'
+%left 'v'
+%left '^'
 %left '!'
-%noassoc '<' '>' '<=' '>='
+%nonassoc '<' '>' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'
 %left NEG
+%left '(' '['
 
 %%
 
 BLOCK :: { AST.BLOCK }
-BLOCK : '|[' declare DECLARES INSTRUCTIONS ']|'         { AST.BLOCKD $2 $3 }
-      | '|[' INSTRUCTIONS ']|'                          { AST.BLOCK $1 }
+BLOCK : '|[' declare DECLARES INSTRUCTIONS ']|'         { AST.BLOCKD $3 $4 }
+      | '|[' INSTRUCTIONS ']|'                          { AST.BLOCK $2 }
 
 DECLARES :: { AST.DECLARES }
 DECLARES : DECLARE                                      { AST.DECLARES $1 }
@@ -116,7 +120,7 @@ INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
 
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
-            | varID ':=' INTLIST                        { AST.ASSIGNARRAY $1 $3 }
+            | varID ':=' EXPLIST                        { AST.ASSIGNARRAY $1 $3 }
             | varID ':=' EXPR                           { AST.ASSIGN $1 $3 }
             | read varID                                { AST.READ $2 }
             | print PRINTEXP                            { AST.PRINT $2 }
@@ -125,51 +129,37 @@ INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
             | FOR                                       { AST.FORINST $1 }
             | DO                                        { AST.DOINST $1 }
 
-EXPR :: { AST.EXPRESSION }
-EXPR : INTEXP                                           { AST.INTEXPR $1 }
-     | BOOLEXP                                          { AST.BOOLEXPR $1 }
-     | ARRAYEXP                                         { AST.ARRAYEXPR $1 }
+EXPR :: { AST.EXPR }
+EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
+     | EXPR '-' EXPR                                    { AST.MINUS $1 $3 }
+     | EXPR '*' EXPR                                    { AST.MULT $1 $3 }
+     | EXPR '/' EXPR                                    { AST.DIV $1 $3 }
+     | EXPR '%' EXPR                                    { AST.MOD $1 $3 }
+     | EXPR '[' EXPR ']'                                { AST.ARRELEM $1 $3 }
+     | EXPR '==' EXPR                                   { AST.EQ $1 $3 }
+     | EXPR '!=' EXPR                                   { AST.NEQ $1 $3 }
+     | EXPR '<=' EXPR                                   { AST.LEQ $1 $3 }
+     | EXPR '>=' EXPR                                   { AST.GEQ $1 $3 }
+     | EXPR '<' EXPR                                    { AST.LESS $1 $3 }
+     | EXPR '>' EXPR                                    { AST.GREATER $1 $3 }
+     | EXPR 'v' EXPR                                    { AST.OR $1 $3 }
+     | EXPR '^' EXPR                                    { AST.AND $1 $3 }
+     | '(' EXPR ')'                                     { $2 }
+     | '!' EXPR                                         { AST.NOT $2 }
+     | '-' EXPR %prec NEG                               { AST.NEG $2 }
+     | EXPR '(' EXPR ':' EXPR ')'                       { AST.ARRAYMOD $1 $3 $5 }
+     | size '(' EXPR ')'                                { AST.SIZE $3 }
+     | atoi '(' EXPR ')'                                { AST.ATOI $3 }
+     | min '(' EXPR ')'                                 { AST.MIN $3 }
+     | max '(' EXPR ')'                                 { AST.MAX $3 }
+     | varID                                            { AST.IDT $1 }
+     | false                                            { AST.FALSE }
+     | true                                             { AST.TRUE }
+     | n                                                { AST.NUM $1 }
 
-INTEXP :: { AST.INTEXP }
-INTEXP : INTEXP '+' INTEXP                              { AST.SUM $1 $3 }
-       | INTEXP '-' INTEXP                              { AST.MINUS $1 $3 }
-       | INTEXP '*' INTEXP                              { AST.MULT $1 $3 }
-       | INTEXP '/' INTEXP                              { AST.DIV $1 $3 }
-       | INTEXP '%' INTEXP                              { AST.MOD $1 $3 }
-       | '(' INTEXP ')'                                 { $2 }
-       | '-' INTEXP %prec NEG                           { AST.NEG $2 }
-       | ARRAYEXP '[' INTEXP ']'                        { AST.ARRELEM $1 $3 }
-       | size '(' ARRAYEXP ')'                          { AST.SIZE $3 }
-       | atoi '(' ARRAYEXP ')'                          { AST.ATOI $3 }
-       | min '(' ARRAYEXP ')'                           { AST.MIN $3 }
-       | max '(' ARRAYEXP ')'                           { AST.MAX $3 }
-       | varID                                          { AST.INTID $1 }
-       | n                                              { AST.INTLIT $1 }
-
-BOOLEXP :: { AST.BOOLEXP }
-BOOLEXP : INTEXP '==' INTEXP                            { AST.EQINT $1 $3 }
-        | INTEXP '!=' INTEXP                            { AST.NEQINT $1 $3 }
-        | INTEXP '<=' INTEXP                            { AST.LEQ $1 $3 }
-        | INTEXP '>=' INTEXP                            { AST.GEQ $1 $3 }
-        | INTEXP '<' INTEXP                             { AST.LESS $1 $3 }
-        | INTEXP '>' INTEXP                             { AST.GREATER $1 $3 }
-        | BOOLEXP '==' BOOLEXP                          { AST.EQBOOL $1 $3 }
-        | BOOLEXP '!=' BOOLEXP                          { AST.NEQBOOL $1 $3 }
-        | BOOLEXP '\/' BOOLEXP                          { AST.OR $1 $3 }
-        | BOOLEXP '/\' BOOLEXP                          { AST.AND $1 $3 }
-        | '!' BOOLEXP                                   { AST.NOT $1 $3 }
-        | '(' BOOLEXP ')'                               { $2 }
-        | true                                          { AST.TRUE }
-        | false                                         { AST.FALSE }
-        | varID                                         { AST.BOOLID $1}
-
-ARRAYEXP :: { AST.ARRAYEXP }
-ARRAYEXP : ARRAYEXP '(' INTEXP ':' INTEXP ')'           { AST.ARRAYMOD $1 $3 $5 }
-         | varID                                        { AST.ARRAYID $1 }
-
-INTLIST :: { [AST.INTEXP] }
-INTLIST : INTEXP                                        { [$1] }
-        | INTEXP ',' INTLIST                            { $1 : $3 }
+EXPLIST :: { [AST.EXPR] }
+EXPLIST : {-λ-}                                         { [] }
+        | EXPR ',' EXPLIST                              { $1 : $3 }
 
 PRINTEXP :: { AST.PRINTEXP }
 PRINTEXP : PRINTEXP '||' PRINTEXP                       { AST.CONCAT $1 $3 }
@@ -183,8 +173,18 @@ DO :: { AST.DO }
 DO : do GUARDS od                                       { AST.DO $2 }
 
 FOR :: { AST.FOR }
-FOR : for varID in INTEXP to INTEXP '->' BLOCK rof      { AST.FOR $2 $4 $6 $8 }
+FOR : for varID in EXPR to EXPR '->' BLOCK rof      { AST.FOR $2 $4 $6 $8 }
 
 GUARDS :: { AST.GUARDS }
-GUARDS : BOOLEXP '->' INSTRUCTIONS                      { AST.GUARDS $1 $3 }
+GUARDS : EXPR '->' INSTRUCTIONS                      { AST.GUARDS $1 $3 }
        | GUARDS '[]' GUARDS                             { AST.GUARDSEQ $1 $3 }
+
+{
+
+parseError :: [TokenPos] -> a
+parseError tks = error $ "Parser Error at " ++ msg ++ ": Alex is not happy :c"
+    where 
+        msg = case tks of
+                [] -> "the end of file"
+                ((_,l,_):_) -> "line " ++ show l
+}

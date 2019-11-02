@@ -18,8 +18,8 @@ data INSTRUCTIONS = INST INSTRUCTION
                   | SEQUENCE INSTRUCTION INSTRUCTIONS
 
 data INSTRUCTION = BLOCKINST BLOCK 
-                 | ASSIGNARRAY String [INTEXP]
-                 | ASSIGN String EXPRESSION
+                 | ASSIGNARRAY String [EXPR]
+                 | ASSIGN String EXPR
                  | READ String
                  | PRINT PRINTEXP
                  | PRINTLN PRINTEXP
@@ -27,51 +27,41 @@ data INSTRUCTION = BLOCKINST BLOCK
                  | DOINST DO
                  | FORINST FOR 
 
-data EXPRESSION = INTEXPR INTEXP
-                | BOOLEXPR BOOLEXP
-                | ARRAYEXPR ARRAYEXP
-
-data INTEXP = SUM INTEXP INTEXP
-            | MINUS INTEXP INTEXP
-            | MULT INTEXP INTEXP
-            | DIV INTEXP INTEXP
-            | MOD INTEXP INTEXP
-            | NEG INTEXP
-            | ARRELEM ARRAYEXP INTEXP
-            | SIZE ARRAYEXP
-            | ATOI ARRAYEXP
-            | MIN ARRAYEXP
-            | MAX ARRAYEXP
-            | INTID String
-            | INTLIT Int
-
-data BOOLEXP = EQINT INTEXP INTEXP
-             | NEQINT INTEXP INTEXP
-             | LEQ INTEXP INTEXP
-             | GEQ INTEXP INTEXP
-             | LESS INTEXP INTEXP
-             | GREATER INTEXP INTEXP
-             | EQBOOL BOOLEXP BOOLEXP
-             | NEQBOOL BOOLEXP BOOLEXP
-             | OR BOOLEXP BOOLEXP
-             | AND BOOLEXP BOOLEXP
-             | NOT BOOLEXP
-             | TRUE
-             | FALSE
-             | BOOLID String
-
-data ARRAYEXP = ARRAYMOD ARRAYEXP INTEXP INTEXP
-              | ARRAYID String
+data EXPR = SUM EXPR EXPR
+          | MINUS EXPR EXPR
+          | MULT EXPR EXPR
+          | DIV EXPR EXPR
+          | MOD EXPR EXPR
+          | ARRELEM EXPR EXPR
+          | EQ EXPR EXPR
+          | NEQ EXPR EXPR
+          | LEQ EXPR EXPR
+          | GEQ EXPR EXPR
+          | LESS EXPR EXPR
+          | GREATER EXPR EXPR
+          | OR EXPR EXPR
+          | AND EXPR EXPR
+          | NOT EXPR
+          | NEG EXPR
+          | ARRAYMOD EXPR EXPR EXPR
+          | SIZE EXPR
+          | ATOI EXPR
+          | MIN EXPR
+          | MAX EXPR
+          | IDT String
+          | TRUE
+          | FALSE
+          | NUM Int
 
 data PRINTEXP = CONCAT PRINTEXP PRINTEXP
-              | PEXPR EXPRESSION
+              | PEXPR EXPR
               | STRINGLIT String
 
 newtype IF = IF GUARDS
 
 newtype DO = DO GUARDS
 
-data FOR = FOR String INTEXP INTEXP BLOCK 
+data FOR = FOR String EXPR EXPR BLOCK 
 
-data GUARDS = GUARDS BOOLEXP INSTRUCTIONS
+data GUARDS = GUARDS EXPR INSTRUCTIONS
             | GUARDSEQ GUARDS GUARDS
