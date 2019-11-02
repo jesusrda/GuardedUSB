@@ -1,5 +1,5 @@
 {
-module Parser where
+module Parser(parse) where
 
 import Tokens
 import qualified AST
