@@ -2,6 +2,7 @@
 module Parser where
 
 import Tokens
+import qualified AST
 }
 
 %name parse 
@@ -120,16 +121,16 @@ INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
             | read varID                                { AST.READ $2 }
             | print PRINTEXP                            { AST.PRINT $2 }
             | println PRINTEXP                          { AST.PRINTLN $2 }
-            | IFINST                                    { AST.IF $1 }
-            | FORINST                                   { AST.FOR $1 }
-            | DOINST                                    { AST.DO $1 }
+            | IF                                        { AST.IFINST $1 }
+            | FOR                                       { AST.FORINST $1 }
+            | DO                                        { AST.DOINST $1 }
 
 EXPR :: { AST.EXPRESSION }
-EXPR : INTEXP                                           { AST.INTEXP $1 }
-     | BOOLEXP                                          { AST.BOOLEXP $1 }
-     | ARRAYEXP                                         { AST.ARRAYEXP $1 }
+EXPR : INTEXP                                           { AST.INTEXPR $1 }
+     | BOOLEXP                                          { AST.BOOLEXPR $1 }
+     | ARRAYEXP                                         { AST.ARRAYEXPR $1 }
 
-INTEXP :: { AST.INTEXPRESSION }
+INTEXP :: { AST.INTEXP }
 INTEXP : INTEXP '+' INTEXP                              { AST.SUM $1 $3 }
        | INTEXP '-' INTEXP                              { AST.MINUS $1 $3 }
        | INTEXP '*' INTEXP                              { AST.MULT $1 $3 }
@@ -137,15 +138,15 @@ INTEXP : INTEXP '+' INTEXP                              { AST.SUM $1 $3 }
        | INTEXP '%' INTEXP                              { AST.MOD $1 $3 }
        | '(' INTEXP ')'                                 { $2 }
        | '-' INTEXP %prec NEG                           { AST.NEG $2 }
-       | ARRAYEXP '[' INTEXP ']'                        { AST.ARRCONSULT $1 $3 }
+       | ARRAYEXP '[' INTEXP ']'                        { AST.ARRELEM $1 $3 }
        | size '(' ARRAYEXP ')'                          { AST.SIZE $3 }
        | atoi '(' ARRAYEXP ')'                          { AST.ATOI $3 }
        | min '(' ARRAYEXP ')'                           { AST.MIN $3 }
        | max '(' ARRAYEXP ')'                           { AST.MAX $3 }
        | varID                                          { AST.INTID $1 }
-       | n                                              { AST.INTLITERAL $1 }
+       | n                                              { AST.INTLIT $1 }
 
-BOOLEXP :: { AST.BOOLEXPRESSION }
+BOOLEXP :: { AST.BOOLEXP }
 BOOLEXP : INTEXP '==' INTEXP                            { AST.EQINT $1 $3 }
         | INTEXP '!=' INTEXP                            { AST.NEQINT $1 $3 }
         | INTEXP '<=' INTEXP                            { AST.LEQ $1 $3 }
@@ -162,7 +163,7 @@ BOOLEXP : INTEXP '==' INTEXP                            { AST.EQINT $1 $3 }
         | false                                         { AST.FALSE }
         | varID                                         { AST.BOOLID $1}
 
-ARRAYEXP :: { AST.ARRAYEXPRESSION }
+ARRAYEXP :: { AST.ARRAYEXP }
 ARRAYEXP : ARRAYEXP '(' INTEXP ':' INTEXP ')'           { AST.ARRAYMOD $1 $3 $5 }
          | varID                                        { AST.ARRAYID $1 }
 
@@ -172,18 +173,18 @@ INTLIST : INTEXP                                        { [$1] }
 
 PRINTEXP :: { AST.PRINTEXP }
 PRINTEXP : PRINTEXP '||' PRINTEXP                       { AST.CONCAT $1 $3 }
-         | EXPR                                         { AST.EXPR $1 }
+         | EXPR                                         { AST.PEXPR $1 }
          | s                                            { AST.STRINGLIT $1 }
 
-IFINST :: { AST.IF }
-IFINST : if GUARDS fi                                   { AST.IF $2 }
+IF :: { AST.IF }
+IF : if GUARDS fi                                       { AST.IF $2 }
 
-DOINST :: { AST.DO }
-DOINST : do GUARDS od                                   { AST.DO $2 }
+DO :: { AST.DO }
+DO : do GUARDS od                                       { AST.DO $2 }
+
+FOR :: { AST.FOR }
+FOR : for varID in INTEXP to INTEXP '->' BLOCK rof      { AST.FOR $2 $4 $6 $8 }
 
 GUARDS :: { AST.GUARDS }
 GUARDS : BOOLEXP '->' INSTRUCTIONS                      { AST.GUARDS $1 $3 }
        | GUARDS '[]' GUARDS                             { AST.GUARDSEQ $1 $3 }
-
-FORINST :: { AST.FOR }
-FORINST : for varID in INTEXP to INTEXP '->' BLOCK rof  { AST.FOR $2 $4 $6 $8 }
