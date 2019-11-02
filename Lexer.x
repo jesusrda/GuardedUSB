@@ -25,6 +25,7 @@ tokens :-
 <0>         "if"                                {pushTk TkIf}
 <0>         "fi"                                {pushTk TkFi}
 <0>         "for"                               {pushTk TkFor}
+<0>         "in"                                {pushTk TkIn}
 <0>         "to"                                {pushTk TkTo}
 <0>         "rof"                               {pushTk TkRof}
 <0>         "do"                                {pushTk TkDo}

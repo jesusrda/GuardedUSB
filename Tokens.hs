@@ -12,6 +12,7 @@ data Token =
       | TkIf
       | TkFi
       | TkFor
+      | TkIn
       | TkTo
       | TkRof
       | TkDo
@@ -65,9 +66,9 @@ instance Show Token where
     show TkPrint        = "TkPrint"
     show TkPrintln      = "TkPrintln"
     show TkIf           = "TkIf"
-    show TkElse         = "TkElse"
     show TkFi           = "TkFi"
     show TkFor          = "TkFor"
+    show TkIn           = "TkIn"
     show TkTo           = "TkTo"
     show TkRof          = "TkRof"
     show TkDo           = "TkDo"
