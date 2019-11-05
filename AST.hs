@@ -1,5 +1,7 @@
 module AST where
 
+import Control.Monad
+
 data BLOCK = BLOCK INSTRUCTIONS 
            | BLOCKD DECLARES INSTRUCTIONS
 
@@ -66,3 +68,40 @@ data FOR = FOR String EXPR EXPR BLOCK
 
 data GUARDS = GUARDS EXPR INSTRUCTIONS
             | GUARDSEQ GUARDS GUARDS
+
+putStrIdent :: String -> Int -> IO ()
+putStrIdent str n = do replicateM_ n $ putStr "  "
+					   putStr str
+
+printBLOCK :: BLOCK -> Int -> IO ()
+printBLOCK (BLOCK inst) d = do putStrIdent "Block" d
+							   printINSTS inst d+1
+
+printBLOCK (BLOCKD decs inst) d = do putStrIdent "Block" d
+									 printDECS decs d+1
+									 printINSTS inst d+1
+
+{-
+printDECS :: DECLARES -> Int -> IO ()
+printDECS (DECLARES dec) d = do putStrIdent "Declare" d
+								printDEC dec d+1
+printDECS (SEQUENCED decs dec) d = do putStrIdent "Declare"
+									  printDECS 
+
+printDEC :: DECLARE -> Int -> IO () 
+printDEC (UNIQUETYPE ids t) d = do putStrIdent "Declare" d
+-}								   
+
+printINSTS :: INSTRUCTIONS -> Int -> IO ()
+printINSTS (INST inst) d = printINST inst d
+printINSTS (SEQUENCE insts inst) = do putStrIdent "Sequencing" d
+									  printINSTS insts (d+1)
+									  printINST inst (d+1)
+
+printINST :: INSTRUCTION -> Int -> IO ()
+printINST (BLOCKINST block) d = printBLOCK block d
+printINST (ASSIGNARRAY id exps) d = do putStrIdent "Assign" d
+									   putStrIdent ("ID: " ++ id) (d+1)
+									   
+
+
