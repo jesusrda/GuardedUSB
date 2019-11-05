@@ -73,7 +73,6 @@ import qualified AST
     false       { (TkFalse,_,_) }
 
 %left '[]'
-%left ';'
 %nonassoc ':='
 %left '||'
 %left ':'
@@ -96,18 +95,19 @@ BLOCK : '|[' declare DECLARES INSTRUCTIONS ']|'         { AST.BLOCKD $3 $4 }
 
 DECLARES :: { AST.DECLARES }
 DECLARES : DECLARE                                      { AST.DECLARES $1 }
-         | DECLARE ';' DECLARES                         { AST.SEQUENCED $1 $3 }
+         | DECLARES DECLARE                             { AST.SEQUENCED $1 $2 }
 
 DECLARE :: { AST.DECLARE }
-DECLARE : IDLIST ':' TYPELIST                           { AST.DECLARE $1 $3 }
+DECLARE : UNIQUETYPE                                    { $1 }
+        | MULTITYPE ';'                                 { $1 }
 
-IDLIST :: { [AST.ID] }
-IDLIST : varID                                          { [AST.ID $1] }
-       | varID ',' IDLIST                               { (AST.ID $1) : $3  }
+UNIQUETYPE :: { AST.DECLARE }
+UNIQUETYPE : varID ':' TYPE ';'                         { AST.UNIQUETYPE [AST.ID $1] $3 }
+           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t) -> AST.UNIQUETYPE ((AST.ID $1):vs) t) $3 }
 
-TYPELIST :: { [AST.TYPE] }
-TYPELIST : TYPE                                         { [$1] }
-         | TYPE ',' TYPELIST                            { $1 : $3 }
+MULTITYPE :: { AST.DECLARE }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { AST.MULTITYPE ((AST.ID $1):(AST.ID $3):[]) ($5:$7:[]) }
+          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts) -> AST.MULTITYPE ((AST.ID $1):vs) ($5:ts)) $3 }
 
 TYPE :: { AST.TYPE }
 TYPE : int                                              { AST.INT }
@@ -116,7 +116,7 @@ TYPE : int                                              { AST.INT }
 
 INSTRUCTIONS :: { AST.INSTRUCTIONS }
 INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
-             | INSTRUCTION ';' INSTRUCTIONS             { AST.SEQUENCE $1 $3 }
+             | INSTRUCTIONS ';' INSTRUCTION             { AST.SEQUENCE $1 $3 }
 
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
@@ -158,8 +158,8 @@ EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
      | n                                                { AST.NUM $1 }
 
 EXPLIST :: { [AST.EXPR] }
-EXPLIST : {-λ-}                                         { [] }
-        | EXPR ',' EXPLIST                              { $1 : $3 }
+EXPLIST : {-λ-}                                        { [] }
+        | EXPLIST ',' EXPR                              { $3 : $1 }
 
 PRINTEXP :: { AST.PRINTEXP }
 PRINTEXP : PRINTEXP '||' PRINTEXP                       { AST.CONCAT $1 $3 }
@@ -173,10 +173,10 @@ DO :: { AST.DO }
 DO : do GUARDS od                                       { AST.DO $2 }
 
 FOR :: { AST.FOR }
-FOR : for varID in EXPR to EXPR '->' BLOCK rof      { AST.FOR $2 $4 $6 $8 }
+FOR : for varID in EXPR to EXPR '->' BLOCK rof          { AST.FOR $2 $4 $6 $8 }
 
 GUARDS :: { AST.GUARDS }
-GUARDS : EXPR '->' INSTRUCTIONS                      { AST.GUARDS $1 $3 }
+GUARDS : EXPR '->' INSTRUCTIONS                         { AST.GUARDS $1 $3 }
        | GUARDS '[]' GUARDS                             { AST.GUARDSEQ $1 $3 }
 
 {
