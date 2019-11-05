@@ -120,7 +120,7 @@ INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
 
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
-            | varID ':=' EXPLIST                        { AST.ASSIGNARRAY $1 $3 }
+            | varID ':=' EXPLIST                        { AST.ASSIGNARRAY $1 (reverse $3) }
             | varID ':=' EXPR                           { AST.ASSIGN $1 $3 }
             | read varID                                { AST.READ $2 }
             | print PRINTEXP                            { AST.PRINT $2 }
@@ -158,7 +158,7 @@ EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
      | n                                                { AST.NUM $1 }
 
 EXPLIST :: { [AST.EXPR] }
-EXPLIST : {-λ-}                                        { [] }
+EXPLIST : EXPR ',' EXPR                                 { $3 : $1 : [] }
         | EXPLIST ',' EXPR                              { $3 : $1 }
 
 PRINTEXP :: { AST.PRINTEXP }
