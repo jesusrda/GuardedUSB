@@ -1,7 +1,7 @@
-all: Main clear
+all: GuardedUSB clear
 
-Main: Lexer Tokens AST Parser
-	ghc --make -w Main.hs
+GuardedUSB: Lexer Tokens AST Parser
+	ghc --make -w GuardedUSB.hs -o guardedusb
 
 Lexer: Lexer.x
 	alex Lexer.x
@@ -16,7 +16,7 @@ AST: AST.hs
 	ghc --make -w AST.hs
 
 clean: clear
-	-rm -f Main
+	-rm -f guardedusb
 
 clear:
 	-rm -f *.hi
