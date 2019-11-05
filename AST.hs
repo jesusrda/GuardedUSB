@@ -69,47 +69,180 @@ data FOR = FOR String EXPR EXPR BLOCK
 data GUARDS = GUARDS EXPR INSTRUCTIONS
             | GUARDSEQ GUARDS GUARDS
 
-putStrIdent :: String -> Int -> IO ()
-putStrIdent str n = do replicateM_ n $ putStr "  "
-					   putStrln str
+putStrIdent :: Int -> String -> IO ()
+putStrIdent n str = do replicateM_ n (putStr "  ")
+                       putStrLn str
 
-printBLOCK :: BLOCK -> Int -> IO ()
-printBLOCK (BLOCK inst) d = do putStrIdent "Block" d
-							   printINSTS inst d+1
+printAST :: BLOCK -> IO ()
+printAST block = printBLOCK 0 block
 
-printBLOCK (BLOCKD decs inst) d = do putStrIdent "Block" d
-									 printDECS decs d+1
-									 printINSTS inst d+1
+printBLOCK :: Int -> BLOCK -> IO ()
+printBLOCK d (BLOCK inst) = do putStrIdent d "Block"
+                               printINSTS (d+1) inst
+printBLOCK d (BLOCKD decs inst) = do putStrIdent d "Block"
+                                     putStrIdent (d+1) "Declare"
+                                     printDECS (d+2) decs 
+                                     printINSTS (d+1) inst
 
-{-
-printDECS :: DECLARES -> Int -> IO ()
-printDECS (DECLARES dec) d = do putStrIdent "Declare" d
-								printDEC dec d+1
-printDECS (SEQUENCED decs dec) d = do putStrIdent "Declare"
-									  printDECS 
+printDECS :: Int -> DECLARES -> IO ()
+printDECS d (DECLARES dec) = printDEC d dec 
+printDECS d (SEQUENCED decs dec) = do putStrIdent d "Sequencing"
+                                      printDECS (d+1) decs
+                                      printDEC (d+1) dec
 
-printDEC :: DECLARE -> Int -> IO () 
-printDEC (UNIQUETYPE ids t) d = do putStrIdent "Declare" d
--}								   
+printDEC :: Int -> DECLARE -> IO () 
+printDEC d (UNIQUETYPE ids _) = mapM_ (printID d) ids
+printDEC d (MULTITYPE ids _) = mapM_ (printID d) ids
 
-printINSTS :: INSTRUCTIONS -> Int -> IO ()
-printINSTS (INST inst) d = printINST inst d
-printINSTS (SEQUENCE insts inst) = do putStrIdent "Sequencing" d
-									  printINSTS insts (d+1)
-									  printINST inst (d+1)
+printID :: Int -> ID -> IO ()
+printID d (ID id) = putStrIdent d ("ID: " ++ id) 
 
-printINST :: INSTRUCTION -> Int -> IO ()
-printINST (BLOCKINST block) d = printBLOCK block d
-printINST (ASSIGNARRAY id exps) d = do putStrIdent "AssignArray" d
-                                       putStrIdent ("ID: " ++ id) (d+1) ---- Este hay que arreglarlo, es una lista de ids, no un solo id
+printINSTS :: Int -> INSTRUCTIONS -> IO ()
+printINSTS d (INST inst) = printINST d inst
+printINSTS d (SEQUENCE insts inst) = do putStrIdent d "Sequencing" 
+                                        printINSTS (d+1) insts
+                                        printINST (d+1) inst 
 
-printINST (ASSIGN id exp) d = do putStrIdent "Assign" d
-                                 putStrIdent ("ID: " ++ id) (d+1)
+printINST :: Int -> INSTRUCTION -> IO ()
+printINST d (BLOCKINST block) = printBLOCK d block
+printINST d (ASSIGNARRAY id exps) = do putStrIdent d "AssignArray"
+                                       printID (d+1) (ID id)
+                                       mapM_ (printEXPR (d+1)) exps
 
-printINST (READ id) d = do putStrIdent "Read " d
-                           putStrIdent ("ID: " ++ id) (d+1)
+printINST d (ASSIGN id exp) = do putStrIdent d "Assign"
+                                 printID (d+1) (ID id)
+                                 printEXPR (d+1) exp
 
-printPRINT (PRINT pexp) d = 
-									   
+printINST d (READ id) = do putStrIdent d "Read"
+                           putStrIdent (d+1) ("ID: " ++ id) 
+
+printINST d (PRINT pexp) = do putStrIdent d "Print"
+                              printPEXP (d+1) pexp 
+
+printINST d (PRINTLN pexp) = do putStrIdent d "PrintLn"
+                                printPEXP (d+1) pexp 
+ 
+printINST d (IFINST ifinst) = printIF d ifinst
+printINST d (DOINST doinst) = printDO d doinst
+printINST d (FORINST forinst) = printFOR d forinst
+
+printEXPR :: Int -> EXPR -> IO ()
+printEXPR d (SUM exp1 exp2) = do putStrIdent d "Plus"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (MINUS exp1 exp2) = do putStrIdent d "Minus"
+                                   printEXPR (d+1) exp1
+                                   printEXPR (d+1) exp2
+
+printEXPR d (MULT exp1 exp2) = do putStrIdent d "Mult"
+                                  printEXPR (d+1) exp1
+                                  printEXPR (d+1) exp2
+
+printEXPR d (DIV exp1 exp2) = do putStrIdent d "Div"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (MOD exp1 exp2) = do putStrIdent d "Mod"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (ARRELEM exp1 exp2) = do putStrIdent d "ArrayElement"
+                                     printEXPR (d+1) exp1
+                                     printEXPR (d+1) exp2
+
+printEXPR d (AST.EQ exp1 exp2) = do putStrIdent d "Equal"
+                                    printEXPR (d+1) exp1
+                                    printEXPR (d+1) exp2
+
+printEXPR d (NEQ exp1 exp2) = do putStrIdent d "NotEqual"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (LEQ exp1 exp2) = do putStrIdent d "LessEqual"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (GEQ exp1 exp2) = do putStrIdent d "GreaterEqual"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (LESS exp1 exp2) = do putStrIdent d "Less"
+                                  printEXPR (d+1) exp1
+                                  printEXPR (d+1) exp2
+
+printEXPR d (GREATER exp1 exp2) = do putStrIdent d "Greater"
+                                     printEXPR (d+1) exp1
+                                     printEXPR (d+1) exp2
+
+printEXPR d (OR exp1 exp2) = do putStrIdent d "Or"
+                                printEXPR (d+1) exp1
+                                printEXPR (d+1) exp2
+
+printEXPR d (AND exp1 exp2) = do putStrIdent d "And"
+                                 printEXPR (d+1) exp1
+                                 printEXPR (d+1) exp2
+
+printEXPR d (NOT exp) = do putStrIdent d "Not"
+                           printEXPR (d+1) exp
+
+printEXPR d (NEG exp) = do putStrIdent d "Negate"
+                           printEXPR (d+1) exp
+
+printEXPR d (ARRAYMOD exp1 exp2 exp3) = do putStrIdent d "ModifyArray"
+                                           printEXPR (d+1) exp1
+                                           printEXPR (d+1) exp2
+                                           printEXPR (d+1) exp3
+
+printEXPR d (SIZE exp) = do putStrIdent d "Size"
+                            printEXPR (d+1) exp
+
+printEXPR d (ATOI exp) = do putStrIdent d "Atoi"
+                            printEXPR (d+1) exp
+
+printEXPR d (MIN exp) = do putStrIdent d "Min"
+                           printEXPR (d+1) exp
+
+printEXPR d (MAX exp) = do putStrIdent d "Max"
+                           printEXPR (d+1) exp
+
+printEXPR d (SIZE exp) = do putStrIdent d "Size"
+                            printEXPR (d+1) exp
+
+printEXPR d (IDT id) = putStrIdent d ("ID: " ++ id) 
+printEXPR d TRUE = putStrIdent d "True"
+printEXPR d FALSE = putStrIdent d "False"
+printEXPR d (NUM n) = putStrIdent d ("Literal: " ++ show n)
 
 
+printPEXP :: Int -> PRINTEXP -> IO ()
+printPEXP d (CONCAT exp1 exp2) = do putStrIdent d "Concat"
+                                    printPEXP (d+1) exp1
+                                    printPEXP (d+1) exp2
+printPEXP d (PEXPR exp) = printEXPR d exp 
+printPEXP d (STRINGLIT s) = putStrIdent d ("\"" ++ s ++ "\"")
+
+
+printIF :: Int -> IF -> IO ()
+printIF d (IF gs) = do putStrIdent d "If"
+                       printGUARDS (d+1) gs
+
+printDO :: Int -> DO -> IO ()
+printDO d (DO gs) = do putStrIdent d "Do"
+                       printGUARDS (d+1) gs
+
+printGUARDS :: Int -> GUARDS -> IO ()
+printGUARDS d (GUARDS exp insts) = do putStrIdent d "Guard"
+                                      printEXPR (d+1) exp
+                                      printINSTS (d+1) insts
+printGUARDS d (GUARDSEQ g1 g2) = do printGUARDS d g1
+                                    printGUARDS d g2
+
+printFOR :: Int -> FOR -> IO ()
+printFOR d (FOR id exp1 exp2 block) = do putStrIdent d "For"
+                                         putStrIdent (d+1) ("ID: " ++ id)
+                                         putStrIdent (d+2) "In"
+                                         printEXPR (d+3) exp1
+                                         putStrIdent (d+2) "To"
+                                         printEXPR (d+3) exp2
+                                         printBLOCK (d+4) block 
