@@ -71,7 +71,7 @@ data GUARDS = GUARDS EXPR INSTRUCTIONS
 
 putStrIdent :: String -> Int -> IO ()
 putStrIdent str n = do replicateM_ n $ putStr "  "
-					   putStr str
+					   putStrln str
 
 printBLOCK :: BLOCK -> Int -> IO ()
 printBLOCK (BLOCK inst) d = do putStrIdent "Block" d
@@ -100,8 +100,16 @@ printINSTS (SEQUENCE insts inst) = do putStrIdent "Sequencing" d
 
 printINST :: INSTRUCTION -> Int -> IO ()
 printINST (BLOCKINST block) d = printBLOCK block d
-printINST (ASSIGNARRAY id exps) d = do putStrIdent "Assign" d
-									   putStrIdent ("ID: " ++ id) (d+1)
+printINST (ASSIGNARRAY id exps) d = do putStrIdent "AssignArray" d
+                                       putStrIdent ("ID: " ++ id) (d+1) ---- Este hay que arreglarlo, es una lista de ids, no un solo id
+
+printINST (ASSIGN id exp) d = do putStrIdent "Assign" d
+                                 putStrIdent ("ID: " ++ id) (d+1)
+
+printINST (READ id) d = do putStrIdent "Read " d
+                           putStrIdent ("ID: " ++ id) (d+1)
+
+printPRINT (PRINT pexp) d = 
 									   
 
 
