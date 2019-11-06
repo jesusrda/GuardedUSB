@@ -2,24 +2,31 @@ module AST where
 
 import Control.Monad
 
+-- Block has declares and instructions or just instructions
 data BLOCK = BLOCK INSTRUCTIONS 
            | BLOCKD DECLARES INSTRUCTIONS
 
+-- Multiple declare statements
 data DECLARES = DECLARES DECLARE
               | SEQUENCED DECLARES DECLARE
 
+-- Single declare statement
 data DECLARE = UNIQUETYPE [ID] TYPE
              | MULTITYPE [ID] [TYPE]
 
+-- ID
 newtype ID = ID String
 
+-- Type declaration
 data TYPE = INT 
           | BOOL
           | ARRAY Int Int
 
+-- Multiple instructions
 data INSTRUCTIONS = INST INSTRUCTION
                   | SEQUENCE INSTRUCTIONS INSTRUCTION
 
+-- Single instruction
 data INSTRUCTION = BLOCKINST BLOCK 
                  | ASSIGNARRAY String [EXPR]
                  | ASSIGN String EXPR
@@ -30,6 +37,7 @@ data INSTRUCTION = BLOCKINST BLOCK
                  | DOINST DO
                  | FORINST FOR 
 
+-- Arithmetic, boolean and array expressions
 data EXPR = SUM EXPR EXPR
           | MINUS EXPR EXPR
           | MULT EXPR EXPR
@@ -56,23 +64,31 @@ data EXPR = SUM EXPR EXPR
           | FALSE
           | NUM Int
 
+-- Printable expression (can include string literals and concatenation)
 data PRINTEXP = CONCAT PRINTEXP PRINTEXP
               | PEXPR EXPR
               | STRINGLIT String
 
+-- If statement
 newtype IF = IF GUARDS
 
+-- Do statement
 newtype DO = DO GUARDS
 
+-- For statement
 data FOR = FOR String EXPR EXPR BLOCK 
 
+-- Guards with condition and instructions for if and do statements
 data GUARDS = GUARDS EXPR INSTRUCTIONS
             | GUARDSEQ GUARDS GUARDS
 
+
+-- Function used to print an identation space and then a string
 putStrIdent :: Int -> String -> IO ()
 putStrIdent n str = do replicateM_ n (putStr "  ")
                        putStrLn str
 
+ -- Functions used to print every node of the tree
 printAST :: BLOCK -> IO ()
 printAST block = printBLOCK 0 block
 

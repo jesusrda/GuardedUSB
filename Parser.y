@@ -138,7 +138,7 @@ INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
             | IF                                        { AST.IFINST $1 }
             | FOR                                       { AST.FORINST $1 }
             | DO                                        { AST.DOINST $1 }
-
+            
 -- Arithmetic, boolean and array expressions
 EXPR :: { AST.EXPR }
 EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
