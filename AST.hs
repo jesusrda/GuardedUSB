@@ -102,7 +102,7 @@ printBLOCK d (BLOCKD decs inst) = do putStrIdent d "Block"
 
 printDECS :: Int -> DECLARES -> IO ()
 printDECS d (DECLARES dec) = printDEC d dec 
-printDECS d (SEQUENCED decs dec) = do putStrIdent d "Sequencing"
+printDECS d (SEQUENCED decs dec) = do putStrIdent d "Sequencing dec"
                                       printDECS (d+1) decs
                                       printDEC (d+1) dec
 
@@ -115,7 +115,7 @@ printID d (ID id) = putStrIdent d ("ID: " ++ id)
 
 printINSTS :: Int -> INSTRUCTIONS -> IO ()
 printINSTS d (INST inst) = printINST d inst
-printINSTS d (SEQUENCE insts inst) = do putStrIdent d "Sequencing" 
+printINSTS d (SEQUENCE insts inst) = do putStrIdent d "Sequencing inst" 
                                         printINSTS (d+1) insts
                                         printINST (d+1) inst 
 
