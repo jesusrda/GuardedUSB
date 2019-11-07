@@ -98,16 +98,16 @@ BLOCK : '|[' declare DECLARES INSTRUCTIONS ']|'         { AST.BLOCKD $3 $4 }
 -- Multiple declare statements
 DECLARES :: { AST.DECLARES }
 DECLARES : DECLARE                                      { AST.DECLARES $1 }
-         | DECLARES DECLARE                             { AST.SEQUENCED $1 $2 }
+         | DECLARES ';' DECLARE                         { AST.SEQUENCED $1 $3 }
 
 -- Single declare statement
 DECLARE :: { AST.DECLARE }
 DECLARE : UNIQUETYPE                                    { $1 }
-        | MULTITYPE ';'                                 { $1 }
+        | MULTITYPE                                     { $1 }
 
 -- Declare statement for a list of id's and only one type
 UNIQUETYPE :: { AST.DECLARE }
-UNIQUETYPE : varID ':' TYPE ';'                         { AST.UNIQUETYPE [AST.ID $1] $3 }
+UNIQUETYPE : varID ':' TYPE                             { AST.UNIQUETYPE [AST.ID $1] $3 }
            | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t) -> AST.UNIQUETYPE ((AST.ID $1):vs) t) $3 }
 
 -- Declare statement for a list of id's and a list of types
@@ -121,6 +121,9 @@ TYPE :: { AST.TYPE }
 TYPE : int                                              { AST.INT }
      | bool                                             { AST.BOOL }
      | array '[' n '..' n ']'                           { AST.ARRAY $3 $5 }
+     | array '[' '-' n '..' n ']'                       { AST.ARRAY (-$4) $6 }
+     | array '[' '-' n '..' '-' n ']'                   { AST.ARRAY (-$4) (-$7) }
+     | array '[' n '..' '-' n ']'                       { AST.ARRAY $3 (-$6) }
 
 -- Multiple instructions
 INSTRUCTIONS :: { AST.INSTRUCTIONS }
@@ -138,7 +141,7 @@ INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
             | IF                                        { AST.IFINST $1 }
             | FOR                                       { AST.FORINST $1 }
             | DO                                        { AST.DOINST $1 }
-            
+
 -- Arithmetic, boolean and array expressions
 EXPR :: { AST.EXPR }
 EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
