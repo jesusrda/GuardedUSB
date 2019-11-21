@@ -223,9 +223,6 @@ printEXPR d (MIN exp) = do putStrIdent d "Min"
 printEXPR d (MAX exp) = do putStrIdent d "Max"
                            printEXPR (d+1) exp
 
-printEXPR d (SIZE exp) = do putStrIdent d "Size"
-                            printEXPR (d+1) exp
-
 printEXPR d (IDT id) = putStrIdent d ("ID: " ++ id) 
 printEXPR d TRUE = putStrIdent d "True"
 printEXPR d FALSE = putStrIdent d "False"
