@@ -46,10 +46,24 @@ lookupID id = do
                 Just s -> (Just s)
                 Nothing -> stackLookup ts
 
-stackPop :: StateM ()
+stackPop :: StateM SymTable
 stackPop = do
     (OurState (t:ts) buff) <- get
     put $ OurState ts buff
+    return t
+
+stackPush :: SymTable -> StateM ()
+stackPush t = do
+    (OurState tStack buffer) <- get
+    put $ OurState (t : tStack) buffer
+
+-- Auxiliar function to push an error to the state
+printToError :: String -> StateM ()
+printToError str = do
+    (OurState tStack buffer) <- get
+    case buffer of
+        Left _ -> return ()
+        Right _ -> put $ OurState tStack (Left ("Context Error: " ++ str))
 
 -- Auxiliar function to print idented strings to buffer
 printToBuffer :: Int -> String -> StateM ()
@@ -85,17 +99,99 @@ traverseBLOCK d (BLOCK inst) = do
     printToBuffer d "Block"
     traverseINSTS (d+1) inst
 traverseBLOCK d (BLOCKD decs inst) = do
-    (OurState tStack buffer) <- get
-    put $ OurState (emptySymTable : tStack) buffer
+    stackPush emptySymTable
     printToBuffer d "Block"
     traverseDECS decs
     printSymTable (d+1)
     traverseINSTS (d+1) inst
     stackPop
+    return ()
 
--- Traverse thr
+-- Traverse declares inserting Symbols in SymTable
 traverseDECS :: DECLARES -> StateM ()
-traverseDECS = undefined
+traverseDECS (DECLARES dec) = traverseDEC dec
+traverseDECS (SEQUENCED decs dec) = do
+    traverseDECS decs
+    traverseDEC dec
 
+traverseDEC :: DECLARE -> StateM ()
+traverseDEC dec = 
+    case dec of
+        (UNIQUETYPE ids tp) -> insertIDS ids $ replicate (length ids) tp
+        (MULTITYPE ids tps) -> insertIDS ids tps
+    where
+        insertIDS [] [] = return ()
+        insertIDS (id:ids) (tp:tps) = do
+            st <- stackPop
+            case symTableLookup id st of
+                Nothing -> stackPush $ symTableInsert (VarSym id tp) st
+                Just _ -> printToError $ "Variable: " ++ id ++ 
+                                         " declared more than once in the same block"
 
-traverseINSTS = undefined
+traverseINSTS :: Int -> INSTRUCTIONS -> StateM ()
+traverseINSTS d (INST inst) = traverseINST d inst
+traverseINSTS d (SEQUENCE insts inst) = do
+    printToBuffer d "Sequencing"
+    traverseINSTS (d+1) insts
+    traverseINST (d+1) inst
+
+traverseINST :: Int -> INSTRUCTION -> StateM ()
+traverseINST d (BLOCKINST block) = traverseBLOCK d block
+traverseINST d (ASSIGNARRAY id exps) = do
+    printToBuffer d "Assign Array"
+    sym <- lookupID id
+    case sym of
+        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
+        Just s ->
+            case symType s of
+                ARRAY l r -> if (r - l) == (length exps) 
+                                then printToBuffer (d+1) ("ID: " ++ id)
+                                else printToError $ "Size of array " ++ id ++ 
+                                                    " differ from size of expression list"
+                _ -> printToError $ "Type mismatch: variable " ++ id ++ "is not an array" 
+    ts <- mapM (traverseEXPR (d+1)) exps
+    if (all (== INT) ts) 
+        then return ()
+        else printToError $ "Some expressions are not integers in " ++ id ++ " array asignment"
+traverseINST d (ASSIGN id exp) = do
+    printToBuffer d "Assign"
+    printToBuffer (d+1) ("ID: " ++ id)
+    t <- traverseEXPR (d+1) exp
+    sym <- lookupID id 
+    case sym of
+        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
+        Just s -> 
+            if (symType s == t) 
+                then return ()
+                else printToError $ "Type Mismatch in variable " ++ id ++ " assignment"
+traverseINST d (READ id) = do
+    printToBuffer d "Read"
+    printToBuffer (d+1) ("ID: " ++ id)
+    sym <- lookupID id
+    case sym of
+        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
+        Just s -> return ()
+traverseINST d (PRINT pexp) = do
+    printToBuffer d "Print"
+    traversePEXP (d+1) pexp
+traverseINST d (PRINTLN pexp) = do 
+    printToBuffer d "PrintLn"
+    traversePEXP (d+1) pexp
+traverseINST d (IFINST ifinst) = traverseIF ifinst
+traverseINST d (DOINST doinst) = traverseDO doinst
+traverseINST d (FORINST forinst) = traverseFOR forinst
+
+traverseEXPR :: Int -> EXPR -> StateM TYPE
+traverseEXPR d (SUM exp1 exp2) = do
+    printToBuffer d "Plus"
+    t1 <- traverseEXPR (d+1) exp1
+    t2 <- traverseEXPR (d+1) exp2
+    return t1
+
+traversePEXP = undefined
+
+traverseIF = undefined
+
+traverseDO = undefined
+
+traverseFOR = undefined

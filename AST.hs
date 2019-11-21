@@ -21,7 +21,8 @@ type ID = String
 data TYPE = INT 
           | BOOL
           | ARRAY Int Int
-          | FORVAR
+          | FORVAR 
+          deriving (Eq)
 
 -- Multiple instructions
 data INSTRUCTIONS = INST INSTRUCTION
