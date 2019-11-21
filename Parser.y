@@ -107,14 +107,14 @@ DECLARE : UNIQUETYPE                                    { $1 }
 
 -- Declare statement for a list of id's and only one type
 UNIQUETYPE :: { AST.DECLARE }
-UNIQUETYPE : varID ':' TYPE                             { AST.UNIQUETYPE [AST.ID $1] $3 }
-           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t) -> AST.UNIQUETYPE ((AST.ID $1):vs) t) $3 }
+UNIQUETYPE : varID ':' TYPE                             { AST.UNIQUETYPE [$1] $3 }
+           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t) -> AST.UNIQUETYPE ($1:vs) t) $3 }
 
 -- Declare statement for a list of id's and a list of types
 -- One type for each id
 MULTITYPE :: { AST.DECLARE }
-MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { AST.MULTITYPE ((AST.ID $1):(AST.ID $3):[]) ($5:$7:[]) }
-          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts) -> AST.MULTITYPE ((AST.ID $1):vs) ($5:ts)) $3 }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { AST.MULTITYPE ($1:$3:[]) ($5:$7:[]) }
+          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts) -> AST.MULTITYPE ($1:vs) ($5:ts)) $3 }
 
 -- Type declaration
 TYPE :: { AST.TYPE }

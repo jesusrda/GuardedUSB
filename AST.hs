@@ -15,12 +15,13 @@ data DECLARE = UNIQUETYPE [ID] TYPE
              | MULTITYPE [ID] [TYPE]
 
 -- ID
-newtype ID = ID String
+type ID = String
 
 -- Type declaration
 data TYPE = INT 
           | BOOL
           | ARRAY Int Int
+          | FORVAR
 
 -- Multiple instructions
 data INSTRUCTIONS = INST INSTRUCTION
@@ -111,7 +112,7 @@ printDEC d (UNIQUETYPE ids _) = mapM_ (printID d) ids
 printDEC d (MULTITYPE ids _) = mapM_ (printID d) ids
 
 printID :: Int -> ID -> IO ()
-printID d (ID id) = putStrIdent d ("ID: " ++ id) 
+printID d id = putStrIdent d ("ID: " ++ id) 
 
 printINSTS :: Int -> INSTRUCTIONS -> IO ()
 printINSTS d (INST inst) = printINST d inst
@@ -122,11 +123,11 @@ printINSTS d (SEQUENCE insts inst) = do putStrIdent d "Sequencing inst"
 printINST :: Int -> INSTRUCTION -> IO ()
 printINST d (BLOCKINST block) = printBLOCK d block
 printINST d (ASSIGNARRAY id exps) = do putStrIdent d "AssignArray"
-                                       printID (d+1) (ID id)
+                                       printID (d+1) id
                                        mapM_ (printEXPR (d+1)) exps
 
 printINST d (ASSIGN id exp) = do putStrIdent d "Assign"
-                                 printID (d+1) (ID id)
+                                 printID (d+1) id
                                  printEXPR (d+1) exp
 
 printINST d (READ id) = do putStrIdent d "Read"
