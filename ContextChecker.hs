@@ -68,7 +68,6 @@ printToError str = do
 -- Auxiliar function to print idented strings to buffer
 printToBuffer :: Int -> String -> StateM ()
 printToBuffer n str = do 
-    liftIO $ putStrIdent n str
     let strIdent = (concat $ replicate n "  ") ++ str
     (OurState tStack buffer) <- get
     case buffer of
@@ -108,7 +107,7 @@ traverseAST block = do
     buffer <- gets bufferAST
     case buffer of
         Left err -> liftIO $ print err
-        Right lns -> liftIO $ print $ unlines $ reverse lns
+        Right lns -> liftIO $ putStr $ unlines $ reverse lns
     return ()
 
 -- Function to traverse block
@@ -142,7 +141,9 @@ traverseDEC dec =
         insertIDS (id:ids) (tp:tps) = do
             st <- stackPop
             case symTableLookup id st of
-                Nothing -> stackPush $ symTableInsert (VarSym id tp) st
+                Nothing -> do
+                    stackPush $ symTableInsert (VarSym id tp) st
+                    insertIDS ids tps
                 Just _ -> printToError $ "Variable: " ++ id ++ 
                                          " declared more than once in the same block"
 
@@ -310,7 +311,10 @@ traverseEXPR d (IDT id) = do
     printToBuffer d $ "ID: " ++ id
     sym <- lookupID id
     case sym of
-        Just s -> return $ symType s
+        Just s -> return $ 
+            case symType s of
+                FORVAR -> INT
+                t -> t 
         Nothing -> do
             printToError $ "Variable " ++ id ++ " not in scope."
             return INT 
