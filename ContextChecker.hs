@@ -93,6 +93,14 @@ printSymTable d = do
     mapM_ (printToBuffer (d+1)) $ map printSym $ map snd $ H.toList t 
     printToBuffer 0 ""
 
+
+checkTYPE :: Int -> (TYPE -> Bool) -> EXPR -> StateM ()
+checkTYPE d f exp = do
+    t <- traverseEXPR d exp
+    if f t 
+        then return ()
+        else printToError "Type mismatch"
+
 -- Function to traverse block
 traverseBLOCK :: Int -> BLOCK -> StateM ()
 traverseBLOCK d (BLOCK inst) = do
@@ -139,34 +147,25 @@ traverseINST :: Int -> INSTRUCTION -> StateM ()
 traverseINST d (BLOCKINST block) = traverseBLOCK d block
 traverseINST d (ASSIGNARRAY id exps) = do
     printToBuffer d "Assign Array"
+    printToBuffer (d+1) $ "ID: " ++ id 
     sym <- lookupID id
     case sym of
         Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
-        Just s ->
-            case symType s of
-                ARRAY l r -> if (r - l) == (length exps) 
-                                then printToBuffer (d+1) ("ID: " ++ id)
-                                else printToError $ "Size of array " ++ id ++ 
-                                                    " differ from size of expression list"
-                _ -> printToError $ "Type mismatch: variable " ++ id ++ "is not an array" 
-    ts <- mapM (traverseEXPR (d+1)) exps
-    if (all (== INT) ts) 
-        then return ()
-        else printToError $ "Some expressions are not integers in " ++ id ++ " array asignment"
+        Just s -> 
+            if isARRAYL (length exps) (symType s)
+                then return ()
+                else printToError $ "Size mismatch in array " ++ id ++ "assignment"
+    mapM_ (checkTYPE (d+1) isINT) exps
 traverseINST d (ASSIGN id exp) = do
     printToBuffer d "Assign"
-    printToBuffer (d+1) ("ID: " ++ id)
-    t <- traverseEXPR (d+1) exp
+    printToBuffer (d+1) $ "ID: " ++ id
     sym <- lookupID id 
     case sym of
         Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
-        Just s -> 
-            if (symType s == t) 
-                then return ()
-                else printToError $ "Type Mismatch in variable " ++ id ++ " assignment"
+        Just s -> checkTYPE (d+1) (\t -> t == symType s) exp
 traverseINST d (READ id) = do
     printToBuffer d "Read"
-    printToBuffer (d+1) ("ID: " ++ id)
+    printToBuffer (d+1) $ "ID: " ++ id
     sym <- lookupID id
     case sym of
         Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
@@ -181,12 +180,121 @@ traverseINST d (IFINST ifinst) = traverseIF ifinst
 traverseINST d (DOINST doinst) = traverseDO doinst
 traverseINST d (FORINST forinst) = traverseFOR forinst
 
+
 traverseEXPR :: Int -> EXPR -> StateM TYPE
 traverseEXPR d (SUM exp1 exp2) = do
     printToBuffer d "Plus"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (MINUS exp1 exp2) = do
+    printToBuffer d "Minus"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (MULT exp1 exp2) = do
+    printToBuffer d "Mult"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (DIV exp1 exp2) = do
+    printToBuffer d "Div"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (MOD exp1 exp2) = do
+    printToBuffer d "Mod"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (ARRELEM exp1 exp2) = do
+    printToBuffer d "ArrayElement"
+    checkTYPE (d+1) isARRAY exp1
+    checkTYPE (d+1) isINT exp2
+    return INT
+traverseEXPR d (AST.EQ exp1 exp2) = do
+    printToBuffer d "Equal"
     t1 <- traverseEXPR (d+1) exp1
     t2 <- traverseEXPR (d+1) exp2
-    return t1
+    case (t1, t2) of
+        (INT, INT) -> return BOOL
+        (BOOL, BOOL) -> return BOOL
+        (_, _) -> do
+            printToError "Type mismatch"
+            return BOOL
+traverseEXPR d (NEQ exp1 exp2) = do
+    printToBuffer d "NotEqual"
+    t1 <- traverseEXPR (d+1) exp1
+    t2 <- traverseEXPR (d+1) exp2
+    case (t1, t2) of
+        (INT, INT) -> return BOOL
+        (BOOL, BOOL) -> return BOOL
+        (_, _) -> do
+            printToError "Type mismatch"
+            return BOOL
+traverseEXPR d (LEQ exp1 exp2) = do
+    printToBuffer d "LessEqual"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return BOOL
+traverseEXPR d (GEQ exp1 exp2) = do
+    printToBuffer d "GreaterEqual"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return BOOL
+traverseEXPR d (LESS exp1 exp2) = do
+    printToBuffer d "Less"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return BOOL
+traverseEXPR d (GREATER exp1 exp2) = do
+    printToBuffer d "Greater"
+    checkTYPE (d+1) isINT exp1
+    checkTYPE (d+1) isINT exp2
+    return BOOL
+traverseEXPR d (AND exp1 exp2) = do
+    printToBuffer d "And"
+    checkTYPE (d+1) isBOOL exp1
+    checkTYPE (d+1) isBOOL exp2
+    return BOOL
+traverseEXPR d (OR exp1 exp2) = do
+    printToBuffer d "Or"
+    checkTYPE (d+1) isBOOL exp1
+    checkTYPE (d+1) isBOOL exp2
+    return BOOL
+traverseEXPR d (NOT exp) = do
+    printToBuffer d "Not"
+    checkTYPE (d+1) isBOOL exp
+    return BOOL
+traverseEXPR d (NEG exp) = do
+    printToBuffer d "Negate"
+    checkTYPE (d+1) isINT exp
+    return INT
+traverseEXPR d (ARRAYMOD exp1 exp2 exp3) = do
+    printToBuffer d "ModifyArray"
+    t <- traverseEXPR (d+1) exp1
+    checkTYPE (d+1) isINT exp2
+    checkTYPE (d+1) isINT exp3
+    if isARRAY t
+        then return t
+        else do
+            printToError "Type mismatch"
+            return t
+traverseEXPR d (SIZE exp) = do
+    printToBuffer d "Size"
+    checkTYPE (d+1) isARRAY exp
+    return INT
+traverseEXPR d (ATOI exp) = do
+    printToBuffer d "Atoi"
+    checkTYPE (d+1) (isARRAYL 1) exp
+    return INT
+traverseEXPR d (MIN exp) = do
+    printToBuffer d "Min"
+    checkTYPE (d+1) isARRAY exp
+    return INT
+
+
+
 
 traversePEXP = undefined
 
