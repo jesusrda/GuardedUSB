@@ -68,6 +68,7 @@ printToError str = do
 -- Auxiliar function to print idented strings to buffer
 printToBuffer :: Int -> String -> StateM ()
 printToBuffer n str = do 
+    liftIO $ putStrIdent n str
     let strIdent = (concat $ replicate n "  ") ++ str
     (OurState tStack buffer) <- get
     case buffer of
@@ -100,6 +101,15 @@ checkTYPE d f exp = do
     if f t 
         then return ()
         else printToError "Type mismatch"
+
+traverseAST :: BLOCK -> StateM ()
+traverseAST block = do
+    traverseBLOCK 0 block 
+    buffer <- gets bufferAST
+    case buffer of
+        Left err -> liftIO $ print err
+        Right lns -> liftIO $ print $ unlines $ reverse lns
+    return ()
 
 -- Function to traverse block
 traverseBLOCK :: Int -> BLOCK -> StateM ()
@@ -176,9 +186,9 @@ traverseINST d (PRINT pexp) = do
 traverseINST d (PRINTLN pexp) = do 
     printToBuffer d "PrintLn"
     traversePEXP (d+1) pexp
-traverseINST d (IFINST ifinst) = traverseIF ifinst
-traverseINST d (DOINST doinst) = traverseDO doinst
-traverseINST d (FORINST forinst) = traverseFOR forinst
+traverseINST d (IFINST ifinst) = traverseIF d ifinst
+traverseINST d (DOINST doinst) = traverseDO d doinst
+traverseINST d (FORINST forinst) = traverseFOR d forinst
 
 
 traverseEXPR :: Int -> EXPR -> StateM TYPE
@@ -292,14 +302,66 @@ traverseEXPR d (MIN exp) = do
     printToBuffer d "Min"
     checkTYPE (d+1) isARRAY exp
     return INT
+traverseEXPR d (MAX exp) = do
+    printToBuffer d "Max"
+    checkTYPE (d+1) isARRAY exp
+    return INT
+traverseEXPR d (IDT id) = do
+    printToBuffer d $ "ID: " ++ id
+    sym <- lookupID id
+    case sym of
+        Just s -> return $ symType s
+        Nothing -> do
+            printToError $ "Variable " ++ id ++ " not in scope."
+            return INT 
+traverseEXPR d TRUE = do
+    printToBuffer d $ "True"
+    return BOOL
+traverseEXPR d FALSE = do
+    printToBuffer d $ "False"
+    return BOOL
+traverseEXPR d (NUM n) = do
+    printToBuffer d $ "Literal: " ++ show n
+    return INT
 
+traversePEXP :: Int -> PRINTEXP -> StateM ()
+traversePEXP d (CONCAT exp1 exp2) = do
+    printToBuffer d "Concat"
+    traversePEXP (d+1) exp1
+    traversePEXP (d+1) exp2
+traversePEXP d (PEXPR exp) = do
+    traverseEXPR d exp
+    return ()
+traversePEXP d (STRINGLIT s) = 
+    printToBuffer d $ "\"" ++ s ++ "\"" 
 
+traverseIF :: Int -> IF -> StateM ()
+traverseIF d (IF gs) = do
+    printToBuffer d "If"
+    traverseGUARDS (d+1) gs
 
+traverseDO :: Int -> DO -> StateM ()
+traverseDO d (DO gs) = do
+    printToBuffer d "Do"
+    traverseGUARDS (d+1) gs
 
-traversePEXP = undefined
+traverseGUARDS :: Int -> GUARDS -> StateM ()
+traverseGUARDS d (GUARDS exp insts) = do
+    printToBuffer d "Guard"
+    checkTYPE (d+1) isBOOL exp
+    traverseINSTS (d+1) insts
+traverseGUARDS d (GUARDSEQ g1 g2) = do
+    traverseGUARDS d g1
+    traverseGUARDS d g2
 
-traverseIF = undefined
-
-traverseDO = undefined
-
-traverseFOR = undefined
+traverseFOR :: Int -> FOR -> StateM ()
+traverseFOR d (FOR id exp1 exp2 block) = do
+    printToBuffer d "For"
+    printToBuffer (d+1) $ "ID: " ++ id
+    printToBuffer (d+2) "In"
+    checkTYPE (d+3) isINT exp1
+    printToBuffer (d+2) "To"
+    checkTYPE (d+3) isINT exp2
+    stackPush $ symTableInsert (VarSym id INT) emptySymTable
+    printSymTable (d+4)
+    traverseBLOCK (d+4) block 
