@@ -3,6 +3,8 @@ import Data.List
 import Lexer
 import Parser
 import AST
+import ContextChecker
+import Control.Monad.State
 
 main = do
     f <- getArgs >>= return . head
@@ -11,5 +13,7 @@ main = do
 	    s <- readFile f
 	    case scanner s of
 	        Left s -> putStr s
-	        Right toks -> printAST $ parse toks
+	        Right toks -> do
+                runStateT (traverseAST $ parse toks) (OurState [] (Right []))
+                return ()
 	else putStrLn "Error: Wrong Filetype. Only .gusb files allowed"
