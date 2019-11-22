@@ -85,6 +85,24 @@ data GUARDS = GUARDS EXPR INSTRUCTIONS
             | GUARDSEQ GUARDS GUARDS
 
 
+-- Type check functions
+isINT :: TYPE -> Bool
+isINT INT     = True
+isINT FORVAR  = True
+isINT _       = False
+
+isBOOL :: TYPE -> Bool
+isBOOL BOOL = True
+isBOOL _    = False
+
+isARRAY :: TYPE -> Bool
+isARRAY (ARRAY _ _) = True
+isARRAY _           = False
+
+isARRAYL :: Int -> TYPE -> Bool
+isARRAYL len (ARRAY l r) = (r - l) == len
+isARRAYL _ _             = False
+
 -- Function used to print an identation space and then a string
 putStrIdent :: Int -> String -> IO ()
 putStrIdent n str = do replicateM_ n (putStr "  ")
