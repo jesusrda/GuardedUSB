@@ -1,6 +1,6 @@
 all: GuardedUSB clear
 
-GuardedUSB: Lexer Tokens AST Parser
+GuardedUSB: Lexer Tokens AST Parser Context
 	ghc --make -w GuardedUSB.hs -o guardedusb
 
 Lexer: Lexer.x
@@ -14,6 +14,9 @@ Tokens: Tokens.hs
 
 AST: AST.hs
 	ghc --make -w AST.hs
+
+Context: ContextChecker.hs
+	ghc --make -w ContextChecker.hs
 
 clean: clear
 	-rm -f guardedusb
