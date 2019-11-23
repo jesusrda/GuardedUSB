@@ -107,23 +107,23 @@ DECLARE : UNIQUETYPE                                    { $1 }
 
 -- Declare statement for a list of id's and only one type
 UNIQUETYPE :: { AST.DECLARE }
-UNIQUETYPE : varID ':' TYPE                             { AST.UNIQUETYPE [$1] $3 }
-           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t) -> AST.UNIQUETYPE ($1:vs) t) $3 }
+UNIQUETYPE : varID ':' TYPE                             { let (_,row,col) = $2 in AST.UNIQUETYPE [$1] $3 (row,col) }
+           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t pos) -> AST.UNIQUETYPE ($1:vs) t pos) $3  }
 
 -- Declare statement for a list of id's and a list of types
 -- One type for each id
 MULTITYPE :: { AST.DECLARE }
-MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { AST.MULTITYPE ($1:$3:[]) ($5:$7:[]) }
-          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts) -> AST.MULTITYPE ($1:vs) ($5:ts)) $3 }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let (_,row,col) = $4 in AST.MULTITYPE ($1:$3:[]) ($5:$7:[]) (row,col) }
+          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE ($1:vs) ($5:ts) pos) $3 }
 
 -- Type declaration
 TYPE :: { AST.TYPE }
 TYPE : int                                              { AST.INT }
      | bool                                             { AST.BOOL }
-     | array '[' n '..' n ']'                           { AST.ARRAY $3 $5 }
-     | array '[' '-' n '..' n ']'                       { AST.ARRAY (-$4) $6 }
-     | array '[' '-' n '..' '-' n ']'                   { AST.ARRAY (-$4) (-$7) }
-     | array '[' n '..' '-' n ']'                       { AST.ARRAY $3 (-$6) }
+     | array '[' n '..' n ']'                           { let (_,row,col) = $1 in AST.ARRAY $3 $5 (row,col) }
+     | array '[' '-' n '..' n ']'                       { let (_,row,col) = $1 in AST.ARRAY -$4 $6 (row,col) }
+     | array '[' '-' n '..' '-' n ']'                   { let (_,row,col) = $1 in AST.ARRAY -$4 -$7 (row,col) }
+     | array '[' n '..' '-' n ']'                       { let (_,row,col) = $1 in AST.ARRAY $3 -$6 (row,col) }
 
 -- Multiple instructions
 INSTRUCTIONS :: { AST.INSTRUCTIONS }
@@ -133,39 +133,39 @@ INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
 -- Single instruction
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
-            | varID ':=' EXPLIST                        { AST.ASSIGNARRAY $1 (reverse $3) }
-            | varID ':=' EXPR                           { AST.ASSIGN $1 $3 }
-            | read varID                                { AST.READ $2 }
-            | print PRINTEXP                            { AST.PRINT $2 }
-            | println PRINTEXP                          { AST.PRINTLN $2 }
+            | varID ':=' EXPLIST                        { let (_,row,col) = $2 in AST.ASSIGNARRAY $1 (reverse $3) (row,col) }
+            | varID ':=' EXPR                           { let (_,row,col) = $2 in AST.ASSIGN $1 $3 (row,col) }
+            | read varID                                { let (_,row,col) = $1 in AST.READ $2 (row,col) }
+            | print PRINTEXP                            { let (_,row,col) = $1 in AST.PRINT $2 (row,col) }
+            | println PRINTEXP                          { let (_,row,col) = $1 in AST.PRINTLN $2 (row,col) }
             | IF                                        { AST.IFINST $1 }
             | FOR                                       { AST.FORINST $1 }
             | DO                                        { AST.DOINST $1 }
 
 -- Arithmetic, boolean and array expressions
 EXPR :: { AST.EXPR }
-EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 }
-     | EXPR '-' EXPR                                    { AST.MINUS $1 $3 }
-     | EXPR '*' EXPR                                    { AST.MULT $1 $3 }
-     | EXPR '/' EXPR                                    { AST.DIV $1 $3 }
-     | EXPR '%' EXPR                                    { AST.MOD $1 $3 }
-     | EXPR '[' EXPR ']'                                { AST.ARRELEM $1 $3 }
-     | EXPR '==' EXPR                                   { AST.EQ $1 $3 }
-     | EXPR '!=' EXPR                                   { AST.NEQ $1 $3 }
-     | EXPR '<=' EXPR                                   { AST.LEQ $1 $3 }
-     | EXPR '>=' EXPR                                   { AST.GEQ $1 $3 }
-     | EXPR '<' EXPR                                    { AST.LESS $1 $3 }
-     | EXPR '>' EXPR                                    { AST.GREATER $1 $3 }
-     | EXPR 'v' EXPR                                    { AST.OR $1 $3 }
-     | EXPR '^' EXPR                                    { AST.AND $1 $3 }
+EXPR : EXPR '+' EXPR                                    { let (_,row,col) = $2 in AST.SUM $1 $3 (row,col) }
+     | EXPR '-' EXPR                                    { let (_,row,col) = $2 in AST.MINUS $1 $3 (row,col) }
+     | EXPR '*' EXPR                                    { let (_,row,col) = $2 in AST.MULT $1 $3 (row,col) }
+     | EXPR '/' EXPR                                    { let (_,row,col) = $2 in AST.DIV $1 $3 (row,col) }
+     | EXPR '%' EXPR                                    { let (_,row,col) = $2 in AST.MOD $1 $3 (row,col) }
+     | EXPR '[' EXPR ']'                                { let (_,row,col) = $2 in AST.ARRELEM $1 $3 (row,col) }
+     | EXPR '==' EXPR                                   { let (_,row,col) = $2 in AST.EQ $1 $3 (row,col) }
+     | EXPR '!=' EXPR                                   { let (_,row,col) = $2 in AST.NEQ $1 $3 (row,col) }
+     | EXPR '<=' EXPR                                   { let (_,row,col) = $2 in AST.LEQ $1 $3 (row,col)}
+     | EXPR '>=' EXPR                                   { let (_,row,col) = $2 in AST.GEQ $1 $3 (row,col) }
+     | EXPR '<' EXPR                                    { let (_,row,col) = $2 in AST.LESS $1 $3 (row,col) }
+     | EXPR '>' EXPR                                    { let (_,row,col) = $2 in AST.GREATER $1 $3 (row,col) }
+     | EXPR 'v' EXPR                                    { let (_,row,col) = $2 in AST.OR $1 $3 (row,col)}
+     | EXPR '^' EXPR                                    { let (_,row,col) = $2 in AST.AND $1 $3 (row,col) }
      | '(' EXPR ')'                                     { $2 }
-     | '!' EXPR                                         { AST.NOT $2 }
-     | '-' EXPR %prec NEG                               { AST.NEG $2 }
-     | EXPR '(' EXPR ':' EXPR ')'                       { AST.ARRAYMOD $1 $3 $5 }
-     | size '(' EXPR ')'                                { AST.SIZE $3 }
-     | atoi '(' EXPR ')'                                { AST.ATOI $3 }
-     | min '(' EXPR ')'                                 { AST.MIN $3 }
-     | max '(' EXPR ')'                                 { AST.MAX $3 }
+     | '!' EXPR                                         { let (_,row,col) = $1 in AST.NOT $2 (row,col) }
+     | '-' EXPR %prec NEG                               { let (_,row,col) = $1 in AST.NEG $2 (row,col) }
+     | EXPR '(' EXPR ':' EXPR ')'                       { let (_,row,col) = $2 in AST.ARRAYMOD $1 $3 $5 (row,col) }
+     | size '(' EXPR ')'                                { let (_,row,col) = $1 in AST.SIZE $3 (row,col) }
+     | atoi '(' EXPR ')'                                { let (_,row,col) = $1 in AST.ATOI $3 (row,col) }
+     | min '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MIN $3 (row,col) }
+     | max '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MAX $3 (row,col) }
      | varID                                            { AST.IDT $1 }
      | false                                            { AST.FALSE }
      | true                                             { AST.TRUE }
@@ -184,15 +184,15 @@ PRINTEXP : PRINTEXP '||' PRINTEXP                       { AST.CONCAT $1 $3 }
 
 -- If statement
 IF :: { AST.IF }
-IF : if GUARDS fi                                       { AST.IF $2 }
+IF : if GUARDS fi                                       { let (_,row,col) = $1 in AST.IF $2 (row,col) }
 
 -- Do statement
 DO :: { AST.DO }
-DO : do GUARDS od                                       { AST.DO $2 }
+DO : do GUARDS od                                       { let (_,row,col) = $1 in AST.DO $2 (row,col) }
 
 -- For statement
 FOR :: { AST.FOR }
-FOR : for varID in EXPR to EXPR '->' BLOCK rof          { AST.FOR $2 $4 $6 $8 }
+FOR : for varID in EXPR to EXPR '->' BLOCK rof          { let (_,row,col) = $1 in AST.FOR $2 $4 $6 $8 (row,col) }
 
 -- Guards with condition and instructions for if and do statements
 GUARDS :: { AST.GUARDS }

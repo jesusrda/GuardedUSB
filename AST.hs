@@ -2,6 +2,9 @@ module AST where
 
 import Control.Monad
 
+-- Position tuple
+type POS = (Int, Int)
+
 -- Block has declares and instructions or just instructions
 data BLOCK = BLOCK INSTRUCTIONS 
            | BLOCKD DECLARES INSTRUCTIONS
@@ -11,16 +14,15 @@ data DECLARES = DECLARES DECLARE
               | SEQUENCED DECLARES DECLARE
 
 -- Single declare statement
-data DECLARE = UNIQUETYPE [ID] TYPE
-             | MULTITYPE [ID] [TYPE]
+data DECLARE = UNIQUETYPE [ID] TYPE POS
+             | MULTITYPE [ID] [TYPE] POS
 
 -- ID
 type ID = String
-
 -- Type declaration
 data TYPE = INT 
           | BOOL
-          | ARRAY Int Int
+          | ARRAY Int Int POS
           | FORVAR 
           deriving (Eq)
 
@@ -30,41 +32,41 @@ data INSTRUCTIONS = INST INSTRUCTION
 
 -- Single instruction
 data INSTRUCTION = BLOCKINST BLOCK 
-                 | ASSIGNARRAY String [EXPR]
-                 | ASSIGN String EXPR
-                 | READ String
-                 | PRINT PRINTEXP
-                 | PRINTLN PRINTEXP
+                 | ASSIGNARRAY String [EXPR] POS
+                 | ASSIGN String EXPR POS 
+                 | READ String POS 
+                 | PRINT PRINTEXP POS 
+                 | PRINTLN PRINTEXP POS
                  | IFINST IF
                  | DOINST DO
                  | FORINST FOR 
 
 -- Arithmetic, boolean and array expressions
-data EXPR = SUM EXPR EXPR
-          | MINUS EXPR EXPR
-          | MULT EXPR EXPR
-          | DIV EXPR EXPR
-          | MOD EXPR EXPR
-          | ARRELEM EXPR EXPR
-          | EQ EXPR EXPR
-          | NEQ EXPR EXPR
-          | LEQ EXPR EXPR
-          | GEQ EXPR EXPR
-          | LESS EXPR EXPR
-          | GREATER EXPR EXPR
-          | OR EXPR EXPR
-          | AND EXPR EXPR
-          | NOT EXPR
-          | NEG EXPR
-          | ARRAYMOD EXPR EXPR EXPR
-          | SIZE EXPR
-          | ATOI EXPR
-          | MIN EXPR
-          | MAX EXPR
-          | IDT String
-          | TRUE
-          | FALSE
-          | NUM Int
+data EXPR = SUM EXPR EXPR POS
+          | MINUS EXPR EXPR POS
+          | MULT EXPR EXPR POS
+          | DIV EXPR EXPR POS
+          | MOD EXPR EXPR POS
+          | ARRELEM EXPR EXPR POS
+          | EQ EXPR EXPR POS
+          | NEQ EXPR EXPR POS
+          | LEQ EXPR EXPR POS
+          | GEQ EXPR EXPR POS
+          | LESS EXPR EXPR POS
+          | GREATER EXPR EXPR POS
+          | OR EXPR EXPR POS
+          | AND EXPR EXPR POS
+          | NOT EXPR POS
+          | NEG EXPR POS
+          | ARRAYMOD EXPR EXPR EXPR -- Aqui tienes que ver dependiendo de cual es el fallo, creo que no hace falta.
+          | SIZE EXPR POS
+          | ATOI EXPR POS
+          | MIN EXPR POS
+          | MAX EXPR POS
+          | IDT String 
+          | TRUE 
+          | FALSE 
+          | NUM Int 
 
 -- Printable expression (can include string literals and concatenation)
 data PRINTEXP = CONCAT PRINTEXP PRINTEXP
@@ -72,13 +74,13 @@ data PRINTEXP = CONCAT PRINTEXP PRINTEXP
               | STRINGLIT String
 
 -- If statement
-newtype IF = IF GUARDS
+newtype IF = IF GUARDS POS
 
 -- Do statement
-newtype DO = DO GUARDS
+newtype DO = DO GUARDS POS
 
 -- For statement
-data FOR = FOR String EXPR EXPR BLOCK 
+data FOR = FOR String EXPR EXPR BLOCK POS
 
 -- Guards with condition and instructions for if and do statements
 data GUARDS = GUARDS EXPR INSTRUCTIONS
@@ -102,6 +104,8 @@ isARRAY _           = False
 isARRAYL :: Int -> TYPE -> Bool
 isARRAYL len (ARRAY l r) = (r - l) == len
 isARRAYL _ _             = False
+
+{- Functions to print AST  
 
 -- Function used to print an identation space and then a string
 putStrIdent :: Int -> String -> IO ()
@@ -279,3 +283,4 @@ printFOR d (FOR id exp1 exp2 block) = do putStrIdent d "For"
                                          putStrIdent (d+2) "To"
                                          printEXPR (d+3) exp2
                                          printBLOCK (d+4) block 
+-}

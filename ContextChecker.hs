@@ -186,7 +186,7 @@ traverseINST d (PRINT pexp) = do
     traversePEXP (d+1) pexp
 traverseINST d (PRINTLN pexp) = do 
     printToBuffer d "PrintLn"
-    traversePEXP (d+1) pexp
+    traversePEXP (d+1) pexp -- Creo que aqui hay un problema. En caso de haber un error con el PEXP (por ejemplo una variable fuera de socpe) no sabemos en que posición es porque la perdemos aquí (solo tenemos la posición del print)
 traverseINST d (IFINST ifinst) = traverseIF d ifinst
 traverseINST d (DOINST doinst) = traverseDO d doinst
 traverseINST d (FORINST forinst) = traverseFOR d forinst
@@ -352,7 +352,7 @@ traverseDO d (DO gs) = do
 traverseGUARDS :: Int -> GUARDS -> StateM ()
 traverseGUARDS d (GUARDS exp insts) = do
     printToBuffer d "Guard"
-    checkTYPE (d+1) isBOOL exp
+    checkTYPE (d+1) isBOOL exp -- En caso de no ser bool deberiamos imprimir la posición del IF
     traverseINSTS (d+1) insts
 traverseGUARDS d (GUARDSEQ g1 g2) = do
     traverseGUARDS d g1
@@ -369,3 +369,5 @@ traverseFOR d (FOR id exp1 exp2 block) = do
     stackPush $ symTableInsert (VarSym id INT) emptySymTable
     printSymTable (d+4)
     traverseBLOCK (d+4) block 
+    -- Aqui creo que tienes que verificar que lo del to sea mayor que lo del int
+    -- Ademas en caso de haber error deberias reportar el error con la posición del FOR
