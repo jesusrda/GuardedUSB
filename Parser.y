@@ -66,7 +66,7 @@ import qualified AST
     ']|'        { (TkCloseBlock,_,_) }
 
     -- Other Tokens
-    varID       { (TkId _,_,_) }
+    varID       { (TkId $$,_,_) }
     n           { (TkNum $$,_,_) }
     s           { (TkString $$,_,_) }
     true        { (TkTrue,_,_) }
@@ -107,14 +107,14 @@ DECLARE : UNIQUETYPE                                    { $1 }
 
 -- Declare statement for a list of id's and only one type
 UNIQUETYPE :: { AST.DECLARE }
-UNIQUETYPE : varID ':' TYPE                             { let (TkId s,row,col) = $1 in AST.UNIQUETYPE [s] $3 (row,col) }
-           | varID ',' UNIQUETYPE                       { let (TkId s,_,_) = $1 in (\(AST.UNIQUETYPE vs t pos) -> AST.UNIQUETYPE (s:vs) t pos) $3  }
+UNIQUETYPE : varID ':' TYPE                             { let (_,row,col) = $2 in AST.UNIQUETYPE [$1] $3 (row,col) }
+           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t pos) -> AST.UNIQUETYPE ($1:vs) t pos) $3  }
 
 -- Declare statement for a list of id's and a list of types
 -- One type for each id
 MULTITYPE :: { AST.DECLARE }
-MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let ((TkId s1,_,_),(TkId s2,row,col)) = ($1,$3) in AST.MULTITYPE (s1:s2:[]) ($5:$7:[]) (row,col) }
-          | varID ',' MULTITYPE ',' TYPE                { let (TkId s,_,_) = $1 in (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE (s:vs) ($5:ts) pos) $3 }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let (_,row,col) = $4 in AST.MULTITYPE ($1:$3:[]) ($5:$7:[]) (row,col) }
+          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE ($1:vs) ($5:ts) pos) $3 }
 
 -- Type declaration
 TYPE :: { AST.TYPE }
@@ -133,9 +133,9 @@ INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
 -- Single instruction
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
-            | varID ':=' EXPLIST                        { let (TkId s,row,col) = $1 in AST.ASSIGNARRAY s (reverse $3) (row,col) }
-            | varID ':=' EXPR                           { let (TkId s,row,col) = $1 in AST.ASSIGN s $3 (row,col) }
-            | read varID                                { let (TkId s,row,col) = $1 in AST.READ s (row,col) }
+            | varID ':=' EXPLIST                        { let (_,row,col) = $2 in AST.ASSIGNARRAY $1 (reverse $3) (row,col) }
+            | varID ':=' EXPR                           { let (_,row,col) = $2 in AST.ASSIGN $1 $3 (row,col) }
+            | read varID                                { let (_,row,col) = $1 in AST.READ $2 (row,col) }
             | print PRINTEXP                            { let (_,row,col) = $1 in AST.PRINT $2 (row,col) }
             | println PRINTEXP                          { let (_,row,col) = $1 in AST.PRINTLN $2 (row,col) }
             | IF                                        { AST.IFINST $1 }
@@ -166,7 +166,7 @@ EXPR : EXPR '+' EXPR                                    { let (_,row,col) = $2 i
      | atoi '(' EXPR ')'                                { let (_,row,col) = $1 in AST.ATOI $3 (row,col) }
      | min '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MIN $3 (row,col) }
      | max '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MAX $3 (row,col) }
-     | varID                                            { let (TkId s,row,col) = $1 in AST.IDT s (row,col) }
+     | varID                                            { AST.IDT $1 }
      | false                                            { AST.FALSE }
      | true                                             { AST.TRUE }
      | n                                                { AST.NUM $1 }
@@ -192,7 +192,7 @@ DO : do GUARDS od                                       { AST.DO $2 }
 
 -- For statement
 FOR :: { AST.FOR }
-FOR : for varID in EXPR to EXPR '->' BLOCK rof          { let (TkId s,row,col) = $2 in AST.FOR s $4 $6 $8 (row,col) }
+FOR : for varID in EXPR to EXPR '->' BLOCK rof          { let (_,row,col) = $1 in AST.FOR $2 $4 $6 $8 (row,col) }
 
 -- Guards with condition and instructions for if and do statements
 GUARDS :: { AST.GUARDS }

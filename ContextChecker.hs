@@ -98,7 +98,7 @@ printSymTable d = do
 
 checkTYPE :: POS -> Int -> (TYPE -> Bool) -> EXPR -> StateM ()
 checkTYPE pos d f exp = do
-    t <- traverseEXPR d exp
+    t <- traverseEXPR pos d exp
     if f t 
         then return ()
         else printToError pos "Type mismatch"
@@ -190,109 +190,109 @@ traverseINST d (READ id pos) = do
     case sym of
         Nothing -> printToError pos $ "Variable " ++ id ++ " not in scope."
         Just s -> return ()
-traverseINST d (PRINT pexp _) = do
+traverseINST d (PRINT pexp pos) = do
     printToBuffer d "Print"
-    traversePEXP (d+1) pexp
-traverseINST d (PRINTLN pexp _) = do 
+    traversePEXP pos (d+1) pexp
+traverseINST d (PRINTLN pexp pos) = do 
     printToBuffer d "PrintLn"
-    traversePEXP (d+1) pexp 
+    traversePEXP pos (d+1) pexp 
 traverseINST d (IFINST ifinst) = traverseIF d ifinst
 traverseINST d (DOINST doinst) = traverseDO d doinst
 traverseINST d (FORINST forinst) = traverseFOR d forinst
 
 
-traverseEXPR :: Int -> EXPR -> StateM TYPE
-traverseEXPR d (SUM exp1 exp2 pos) = do
+traverseEXPR :: POS -> Int -> EXPR -> StateM TYPE
+traverseEXPR _ d (SUM exp1 exp2 pos) = do
     printToBuffer d "Plus"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MINUS exp1 exp2 pos) = do
+traverseEXPR _ d (MINUS exp1 exp2 pos) = do
     printToBuffer d "Minus"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MULT exp1 exp2 pos) = do
+traverseEXPR _ d (MULT exp1 exp2 pos) = do
     printToBuffer d "Mult"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (DIV exp1 exp2 pos) = do
+traverseEXPR _ d (DIV exp1 exp2 pos) = do
     printToBuffer d "Div"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MOD exp1 exp2 pos) = do
+traverseEXPR _ d (MOD exp1 exp2 pos) = do
     printToBuffer d "Mod"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (ARRELEM exp1 exp2 pos) = do
+traverseEXPR _ d (ARRELEM exp1 exp2 pos) = do
     printToBuffer d "ArrayElement"
     checkTYPE pos (d+1) isARRAY exp1
     checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (AST.EQ exp1 exp2 pos) = do
+traverseEXPR _ d (AST.EQ exp1 exp2 pos) = do
     printToBuffer d "Equal"
-    t1 <- traverseEXPR (d+1) exp1
-    t2 <- traverseEXPR (d+1) exp2
+    t1 <- traverseEXPR pos (d+1) exp1
+    t2 <- traverseEXPR pos (d+1) exp2
     case (t1, t2) of
         (INT, INT) -> return BOOL
         (BOOL, BOOL) -> return BOOL
         (_, _) -> do
             printToError pos "Type mismatch"
             return BOOL
-traverseEXPR d (NEQ exp1 exp2 pos) = do
+traverseEXPR _ d (NEQ exp1 exp2 pos) = do
     printToBuffer d "NotEqual"
-    t1 <- traverseEXPR (d+1) exp1
-    t2 <- traverseEXPR (d+1) exp2
+    t1 <- traverseEXPR pos (d+1) exp1
+    t2 <- traverseEXPR pos (d+1) exp2
     case (t1, t2) of
         (INT, INT) -> return BOOL
         (BOOL, BOOL) -> return BOOL
         (_, _) -> do
             printToError pos "Type mismatch"
             return BOOL
-traverseEXPR d (LEQ exp1 exp2 pos) = do
+traverseEXPR _ d (LEQ exp1 exp2 pos) = do
     printToBuffer d "LessEqual"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (GEQ exp1 exp2 pos) = do
+traverseEXPR _ d (GEQ exp1 exp2 pos) = do
     printToBuffer d "GreaterEqual"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (LESS exp1 exp2 pos) = do
+traverseEXPR _ d (LESS exp1 exp2 pos) = do
     printToBuffer d "Less"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (GREATER exp1 exp2 pos) = do
+traverseEXPR _ d (GREATER exp1 exp2 pos) = do
     printToBuffer d "Greater"
     checkTYPE pos (d+1) isINT exp1
     checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (AND exp1 exp2 pos) = do
+traverseEXPR _ d (AND exp1 exp2 pos) = do
     printToBuffer d "And"
     checkTYPE pos (d+1) isBOOL exp1
     checkTYPE pos (d+1) isBOOL exp2
     return BOOL
-traverseEXPR d (OR exp1 exp2 pos) = do
+traverseEXPR _ d (OR exp1 exp2 pos) = do
     printToBuffer d "Or"
     checkTYPE pos (d+1) isBOOL exp1
     checkTYPE pos (d+1) isBOOL exp2
     return BOOL
-traverseEXPR d (NOT exp pos) = do
+traverseEXPR _ d (NOT exp pos) = do
     printToBuffer d "Not"
     checkTYPE pos (d+1) isBOOL exp
     return BOOL
-traverseEXPR d (NEG exp pos) = do
+traverseEXPR _ d (NEG exp pos) = do
     printToBuffer d "Negate"
     checkTYPE pos (d+1) isINT exp
     return INT
-traverseEXPR d (ARRAYMOD exp1 exp2 exp3 pos) = do
+traverseEXPR _ d (ARRAYMOD exp1 exp2 exp3 pos) = do
     printToBuffer d "ModifyArray"
-    t <- traverseEXPR (d+1) exp1
+    t <- traverseEXPR pos (d+1) exp1
     checkTYPE pos (d+1) isINT exp2
     checkTYPE pos (d+1) isINT exp3
     if isARRAY t
@@ -300,23 +300,23 @@ traverseEXPR d (ARRAYMOD exp1 exp2 exp3 pos) = do
         else do
             printToError pos "Type mismatch"
             return t
-traverseEXPR d (SIZE exp pos) = do
+traverseEXPR _ d (SIZE exp pos) = do
     printToBuffer d "Size"
     checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (ATOI exp pos) = do
+traverseEXPR _ d (ATOI exp pos) = do
     printToBuffer d "Atoi"
     checkTYPE pos (d+1) (isARRAYL 1) exp
     return INT
-traverseEXPR d (MIN exp pos) = do
+traverseEXPR _ d (MIN exp pos) = do
     printToBuffer d "Min"
     checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (MAX exp pos) = do
+traverseEXPR _ d (MAX exp pos) = do
     printToBuffer d "Max"
     checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (IDT id pos) = do
+traverseEXPR pos d (IDT id) = do
     printToBuffer d $ "ID: " ++ id
     sym <- lookupID id
     case sym of
@@ -327,25 +327,25 @@ traverseEXPR d (IDT id pos) = do
         Nothing -> do
             printToError pos $ "Variable '" ++ id ++ "' not in scope."
             return INT 
-traverseEXPR d TRUE = do
+traverseEXPR _ d TRUE = do
     printToBuffer d $ "True"
     return BOOL
-traverseEXPR d FALSE = do
+traverseEXPR _ d FALSE = do
     printToBuffer d $ "False"
     return BOOL
-traverseEXPR d (NUM n) = do
+traverseEXPR _ d (NUM n) = do
     printToBuffer d $ "Literal: " ++ show n
     return INT
 
-traversePEXP :: Int -> PRINTEXP -> StateM ()
-traversePEXP d (CONCAT exp1 exp2) = do
+traversePEXP :: POS -> Int -> PRINTEXP -> StateM ()
+traversePEXP pos d (CONCAT exp1 exp2) = do
     printToBuffer d "Concat"
-    traversePEXP (d+1) exp1
-    traversePEXP (d+1) exp2
-traversePEXP d (PEXPR exp) = do
-    traverseEXPR d exp
+    traversePEXP pos (d+1) exp1
+    traversePEXP pos (d+1) exp2
+traversePEXP pos d (PEXPR exp) = do
+    traverseEXPR pos d exp
     return ()
-traversePEXP d (STRINGLIT s) = 
+traversePEXP _ d (STRINGLIT s) = 
     printToBuffer d $ "\"" ++ s ++ "\"" 
 
 traverseIF :: Int -> IF -> StateM ()
