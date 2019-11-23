@@ -22,7 +22,7 @@ type ID = String
 -- Type declaration
 data TYPE = INT 
           | BOOL
-          | ARRAY Int Int POS
+          | ARRAY Int Int
           | FORVAR 
           deriving (Eq)
 
@@ -58,12 +58,12 @@ data EXPR = SUM EXPR EXPR POS
           | AND EXPR EXPR POS
           | NOT EXPR POS
           | NEG EXPR POS
-          | ARRAYMOD EXPR EXPR EXPR -- Aqui tienes que ver dependiendo de cual es el fallo, creo que no hace falta.
+          | ARRAYMOD EXPR EXPR EXPR POS
           | SIZE EXPR POS
           | ATOI EXPR POS
           | MIN EXPR POS
           | MAX EXPR POS
-          | IDT String 
+          | IDT String POS 
           | TRUE 
           | FALSE 
           | NUM Int 
@@ -74,16 +74,16 @@ data PRINTEXP = CONCAT PRINTEXP PRINTEXP
               | STRINGLIT String
 
 -- If statement
-newtype IF = IF GUARDS POS
+newtype IF = IF GUARDS
 
 -- Do statement
-newtype DO = DO GUARDS POS
+newtype DO = DO GUARDS
 
 -- For statement
 data FOR = FOR String EXPR EXPR BLOCK POS
 
 -- Guards with condition and instructions for if and do statements
-data GUARDS = GUARDS EXPR INSTRUCTIONS
+data GUARDS = GUARDS EXPR INSTRUCTIONS POS
             | GUARDSEQ GUARDS GUARDS
 
 
@@ -99,7 +99,7 @@ isBOOL _    = False
 
 isARRAY :: TYPE -> Bool
 isARRAY (ARRAY _ _) = True
-isARRAY _           = False
+isARRAY _             = False
 
 isARRAYL :: Int -> TYPE -> Bool
 isARRAYL len (ARRAY l r) = (r - l) == len

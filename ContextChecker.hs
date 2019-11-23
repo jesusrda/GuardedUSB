@@ -58,12 +58,14 @@ stackPush t = do
     put $ OurState (t : tStack) buffer
 
 -- Auxiliar function to push an error to the state
-printToError :: String -> StateM ()
-printToError str = do
+printToError :: POS -> String -> StateM ()
+printToError (l, c) str = do
     (OurState tStack buffer) <- get
     case buffer of
         Left _ -> return ()
-        Right _ -> put $ OurState tStack (Left ("Context Error: " ++ str))
+        Right _ -> put $ OurState tStack (Left ("Context Error near line " ++ 
+                                                 show l ++ " column " ++ show c ++ 
+                                                 ": " ++ str))
 
 -- Auxiliar function to print idented strings to buffer
 printToBuffer :: Int -> String -> StateM ()
@@ -94,12 +96,18 @@ printSymTable d = do
     printToBuffer 0 ""
 
 
-checkTYPE :: Int -> (TYPE -> Bool) -> EXPR -> StateM ()
-checkTYPE d f exp = do
+checkTYPE :: POS -> Int -> (TYPE -> Bool) -> EXPR -> StateM ()
+checkTYPE pos d f exp = do
     t <- traverseEXPR d exp
     if f t 
         then return ()
-        else printToError "Type mismatch"
+        else printToError pos "Type mismatch"
+
+checkInvalidARRAY :: POS -> TYPE -> StateM ()
+checkInvalidARRAY pos (ARRAY l r) 
+    | r < l     = printToError pos "Invalid array declaration, left limit is greater than ritght limit"
+    | otherwise = return ()
+checkInvalidARRAY _ _ = return ()
 
 traverseAST :: BLOCK -> StateM ()
 traverseAST block = do
@@ -134,18 +142,19 @@ traverseDECS (SEQUENCED decs dec) = do
 traverseDEC :: DECLARE -> StateM ()
 traverseDEC dec = 
     case dec of
-        (UNIQUETYPE ids tp) -> insertIDS ids $ replicate (length ids) tp
-        (MULTITYPE ids tps) -> insertIDS ids tps
+        (UNIQUETYPE ids tp pos) -> insertIDS pos ids $ replicate (length ids) tp
+        (MULTITYPE ids tps pos) -> insertIDS pos ids tps
     where
-        insertIDS [] [] = return ()
-        insertIDS (id:ids) (tp:tps) = do
+        insertIDS pos [] [] = return ()
+        insertIDS pos (id:ids) (tp:tps) = do
             st <- stackPop
+            checkInvalidARRAY pos tp
             case symTableLookup id st of
                 Nothing -> do
                     stackPush $ symTableInsert (VarSym id tp) st
-                    insertIDS ids tps
-                Just _ -> printToError $ "Variable: " ++ id ++ 
-                                         " declared more than once in the same block"
+                    insertIDS pos ids tps
+                Just _ -> printToError pos $ "Variable: '" ++ id ++ 
+                                             "' declared more than once in the same block"
 
 traverseINSTS :: Int -> INSTRUCTIONS -> StateM ()
 traverseINSTS d (INST inst) = traverseINST d inst
@@ -156,74 +165,74 @@ traverseINSTS d (SEQUENCE insts inst) = do
 
 traverseINST :: Int -> INSTRUCTION -> StateM ()
 traverseINST d (BLOCKINST block) = traverseBLOCK d block
-traverseINST d (ASSIGNARRAY id exps) = do
+traverseINST d (ASSIGNARRAY id exps pos) = do
     printToBuffer d "Assign Array"
     printToBuffer (d+1) $ "ID: " ++ id 
     sym <- lookupID id
     case sym of
-        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
+        Nothing -> printToError pos $ "Variable '" ++ id ++ "' not in scope."
         Just s -> 
             if isARRAYL (length exps) (symType s)
                 then return ()
-                else printToError $ "Size mismatch in array " ++ id ++ "assignment"
-    mapM_ (checkTYPE (d+1) isINT) exps
-traverseINST d (ASSIGN id exp) = do
+                else printToError pos $ "Size mismatch in array '" ++ id ++ "' assignment"
+    mapM_ (checkTYPE pos (d+1) isINT) exps
+traverseINST d (ASSIGN id exp pos) = do
     printToBuffer d "Assign"
     printToBuffer (d+1) $ "ID: " ++ id
     sym <- lookupID id 
     case sym of
-        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
-        Just s -> checkTYPE (d+1) (\t -> t == symType s) exp
-traverseINST d (READ id) = do
+        Nothing -> printToError pos $ "Variable " ++ id ++ " not in scope."
+        Just s -> checkTYPE pos (d+1) (\t -> t == symType s) exp
+traverseINST d (READ id pos) = do
     printToBuffer d "Read"
     printToBuffer (d+1) $ "ID: " ++ id
     sym <- lookupID id
     case sym of
-        Nothing -> printToError $ "Variable " ++ id ++ " not in scope."
+        Nothing -> printToError pos $ "Variable " ++ id ++ " not in scope."
         Just s -> return ()
-traverseINST d (PRINT pexp) = do
+traverseINST d (PRINT pexp _) = do
     printToBuffer d "Print"
     traversePEXP (d+1) pexp
-traverseINST d (PRINTLN pexp) = do 
+traverseINST d (PRINTLN pexp _) = do 
     printToBuffer d "PrintLn"
-    traversePEXP (d+1) pexp -- Creo que aqui hay un problema. En caso de haber un error con el PEXP (por ejemplo una variable fuera de socpe) no sabemos en que posición es porque la perdemos aquí (solo tenemos la posición del print)
+    traversePEXP (d+1) pexp 
 traverseINST d (IFINST ifinst) = traverseIF d ifinst
 traverseINST d (DOINST doinst) = traverseDO d doinst
 traverseINST d (FORINST forinst) = traverseFOR d forinst
 
 
 traverseEXPR :: Int -> EXPR -> StateM TYPE
-traverseEXPR d (SUM exp1 exp2) = do
+traverseEXPR d (SUM exp1 exp2 pos) = do
     printToBuffer d "Plus"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MINUS exp1 exp2) = do
+traverseEXPR d (MINUS exp1 exp2 pos) = do
     printToBuffer d "Minus"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MULT exp1 exp2) = do
+traverseEXPR d (MULT exp1 exp2 pos) = do
     printToBuffer d "Mult"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (DIV exp1 exp2) = do
+traverseEXPR d (DIV exp1 exp2 pos) = do
     printToBuffer d "Div"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (MOD exp1 exp2) = do
+traverseEXPR d (MOD exp1 exp2 pos) = do
     printToBuffer d "Mod"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (ARRELEM exp1 exp2) = do
+traverseEXPR d (ARRELEM exp1 exp2 pos) = do
     printToBuffer d "ArrayElement"
-    checkTYPE (d+1) isARRAY exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isARRAY exp1
+    checkTYPE pos (d+1) isINT exp2
     return INT
-traverseEXPR d (AST.EQ exp1 exp2) = do
+traverseEXPR d (AST.EQ exp1 exp2 pos) = do
     printToBuffer d "Equal"
     t1 <- traverseEXPR (d+1) exp1
     t2 <- traverseEXPR (d+1) exp2
@@ -231,9 +240,9 @@ traverseEXPR d (AST.EQ exp1 exp2) = do
         (INT, INT) -> return BOOL
         (BOOL, BOOL) -> return BOOL
         (_, _) -> do
-            printToError "Type mismatch"
+            printToError pos "Type mismatch"
             return BOOL
-traverseEXPR d (NEQ exp1 exp2) = do
+traverseEXPR d (NEQ exp1 exp2 pos) = do
     printToBuffer d "NotEqual"
     t1 <- traverseEXPR (d+1) exp1
     t2 <- traverseEXPR (d+1) exp2
@@ -241,73 +250,73 @@ traverseEXPR d (NEQ exp1 exp2) = do
         (INT, INT) -> return BOOL
         (BOOL, BOOL) -> return BOOL
         (_, _) -> do
-            printToError "Type mismatch"
+            printToError pos "Type mismatch"
             return BOOL
-traverseEXPR d (LEQ exp1 exp2) = do
+traverseEXPR d (LEQ exp1 exp2 pos) = do
     printToBuffer d "LessEqual"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (GEQ exp1 exp2) = do
+traverseEXPR d (GEQ exp1 exp2 pos) = do
     printToBuffer d "GreaterEqual"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (LESS exp1 exp2) = do
+traverseEXPR d (LESS exp1 exp2 pos) = do
     printToBuffer d "Less"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (GREATER exp1 exp2) = do
+traverseEXPR d (GREATER exp1 exp2 pos) = do
     printToBuffer d "Greater"
-    checkTYPE (d+1) isINT exp1
-    checkTYPE (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp1
+    checkTYPE pos (d+1) isINT exp2
     return BOOL
-traverseEXPR d (AND exp1 exp2) = do
+traverseEXPR d (AND exp1 exp2 pos) = do
     printToBuffer d "And"
-    checkTYPE (d+1) isBOOL exp1
-    checkTYPE (d+1) isBOOL exp2
+    checkTYPE pos (d+1) isBOOL exp1
+    checkTYPE pos (d+1) isBOOL exp2
     return BOOL
-traverseEXPR d (OR exp1 exp2) = do
+traverseEXPR d (OR exp1 exp2 pos) = do
     printToBuffer d "Or"
-    checkTYPE (d+1) isBOOL exp1
-    checkTYPE (d+1) isBOOL exp2
+    checkTYPE pos (d+1) isBOOL exp1
+    checkTYPE pos (d+1) isBOOL exp2
     return BOOL
-traverseEXPR d (NOT exp) = do
+traverseEXPR d (NOT exp pos) = do
     printToBuffer d "Not"
-    checkTYPE (d+1) isBOOL exp
+    checkTYPE pos (d+1) isBOOL exp
     return BOOL
-traverseEXPR d (NEG exp) = do
+traverseEXPR d (NEG exp pos) = do
     printToBuffer d "Negate"
-    checkTYPE (d+1) isINT exp
+    checkTYPE pos (d+1) isINT exp
     return INT
-traverseEXPR d (ARRAYMOD exp1 exp2 exp3) = do
+traverseEXPR d (ARRAYMOD exp1 exp2 exp3 pos) = do
     printToBuffer d "ModifyArray"
     t <- traverseEXPR (d+1) exp1
-    checkTYPE (d+1) isINT exp2
-    checkTYPE (d+1) isINT exp3
+    checkTYPE pos (d+1) isINT exp2
+    checkTYPE pos (d+1) isINT exp3
     if isARRAY t
         then return t
         else do
-            printToError "Type mismatch"
+            printToError pos "Type mismatch"
             return t
-traverseEXPR d (SIZE exp) = do
+traverseEXPR d (SIZE exp pos) = do
     printToBuffer d "Size"
-    checkTYPE (d+1) isARRAY exp
+    checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (ATOI exp) = do
+traverseEXPR d (ATOI exp pos) = do
     printToBuffer d "Atoi"
-    checkTYPE (d+1) (isARRAYL 1) exp
+    checkTYPE pos (d+1) (isARRAYL 1) exp
     return INT
-traverseEXPR d (MIN exp) = do
+traverseEXPR d (MIN exp pos) = do
     printToBuffer d "Min"
-    checkTYPE (d+1) isARRAY exp
+    checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (MAX exp) = do
+traverseEXPR d (MAX exp pos) = do
     printToBuffer d "Max"
-    checkTYPE (d+1) isARRAY exp
+    checkTYPE pos (d+1) isARRAY exp
     return INT
-traverseEXPR d (IDT id) = do
+traverseEXPR d (IDT id pos) = do
     printToBuffer d $ "ID: " ++ id
     sym <- lookupID id
     case sym of
@@ -316,7 +325,7 @@ traverseEXPR d (IDT id) = do
                 FORVAR -> INT
                 t -> t 
         Nothing -> do
-            printToError $ "Variable " ++ id ++ " not in scope."
+            printToError pos $ "Variable '" ++ id ++ "' not in scope."
             return INT 
 traverseEXPR d TRUE = do
     printToBuffer d $ "True"
@@ -350,24 +359,22 @@ traverseDO d (DO gs) = do
     traverseGUARDS (d+1) gs
 
 traverseGUARDS :: Int -> GUARDS -> StateM ()
-traverseGUARDS d (GUARDS exp insts) = do
+traverseGUARDS d (GUARDS exp insts pos) = do
     printToBuffer d "Guard"
-    checkTYPE (d+1) isBOOL exp -- En caso de no ser bool deberiamos imprimir la posición del IF
+    checkTYPE pos (d+1) isBOOL exp -- En caso de no ser bool deberiamos imprimir la posición del IF
     traverseINSTS (d+1) insts
 traverseGUARDS d (GUARDSEQ g1 g2) = do
     traverseGUARDS d g1
     traverseGUARDS d g2
 
 traverseFOR :: Int -> FOR -> StateM ()
-traverseFOR d (FOR id exp1 exp2 block) = do
+traverseFOR d (FOR id exp1 exp2 block pos) = do
     printToBuffer d "For"
     printToBuffer (d+1) $ "ID: " ++ id
     printToBuffer (d+2) "In"
-    checkTYPE (d+3) isINT exp1
+    checkTYPE pos (d+3) isINT exp1
     printToBuffer (d+2) "To"
-    checkTYPE (d+3) isINT exp2
+    checkTYPE pos (d+3) isINT exp2
     stackPush $ symTableInsert (VarSym id INT) emptySymTable
     printSymTable (d+4)
     traverseBLOCK (d+4) block 
-    -- Aqui creo que tienes que verificar que lo del to sea mayor que lo del int
-    -- Ademas en caso de haber error deberias reportar el error con la posición del FOR
