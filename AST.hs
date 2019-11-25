@@ -102,7 +102,7 @@ isARRAY (ARRAY _ _) = True
 isARRAY _             = False
 
 isARRAYL :: Int -> TYPE -> Bool
-isARRAYL len (ARRAY l r) = (r - l) == len
+isARRAYL len (ARRAY l r) = (r - l + 1) == len
 isARRAYL _ _             = False
 
 {- Functions to print AST  
