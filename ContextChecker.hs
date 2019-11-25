@@ -150,7 +150,7 @@ traverseDEC :: DECLARE -> StateM ()
 traverseDEC dec = 
     case dec of
         (UNIQUETYPE ids tp pos) -> insertIDS pos ids $ replicate (length ids) tp
-        (MULTITYPE ids tps pos) -> insertIDS pos ids tps
+        (MULTITYPE ids tps pos) -> insertIDS pos ids (reverse tps)
     where
         insertIDS pos [] [] = return ()
         insertIDS pos (id:ids) (tp:tps) = do
@@ -191,7 +191,7 @@ traverseINST d (ASSIGN id exp pos) = do
     sym <- lookupID id 
     case sym of
         Nothing -> printToError pos $ "Variable " ++ id ++ " not in scope."
-        Just s -> checkTYPE pos (d+1) (\t -> t == symType s) exp
+        Just s -> checkTYPE pos (d+1) (\t -> t == symType s || (isINT t && isARRAYL 1 (symType s))) exp
 traverseINST d (READ id pos) = do
     printToBuffer d "Read"
     printToBuffer (d+1) $ "ID: " ++ id

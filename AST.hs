@@ -105,12 +105,12 @@ isARRAYL :: Int -> TYPE -> Bool
 isARRAYL len (ARRAY l r) = (r - l + 1) == len
 isARRAYL _ _             = False
 
-{- Functions to print AST  
-
 -- Function used to print an identation space and then a string
 putStrIdent :: Int -> String -> IO ()
 putStrIdent n str = do replicateM_ n (putStr "  ")
                        putStrLn str
+{-
+-- Functions to print AST 
 
  -- Functions used to print every node of the tree
 printAST :: BLOCK -> IO ()

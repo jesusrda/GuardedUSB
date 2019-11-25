@@ -113,7 +113,7 @@ UNIQUETYPE : varID ':' TYPE                             { let (_,row,col) = $2 i
 -- Declare statement for a list of id's and a list of types
 -- One type for each id
 MULTITYPE :: { AST.DECLARE }
-MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let (_,row,col) = $4 in AST.MULTITYPE ($1:$3:[]) ($5:$7:[]) (row,col) }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let (_,row,col) = $4 in AST.MULTITYPE ($1:$3:[]) ($7:$5:[]) (row,col) }
           | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE ($1:vs) ($5:ts) pos) $3 }
 
 -- Type declaration
