@@ -95,7 +95,8 @@ printSymTable d = do
     mapM_ (printToBuffer (d+1)) $ map printSym $ map snd $ H.toList t 
     printToBuffer 0 ""
 
-
+-- Checks if an expression is of the expected type 
+-- and prints the expression or prints a Type mismatch error
 checkTYPE :: POS -> Int -> (TYPE -> Bool) -> EXPR -> StateM ()
 checkTYPE pos d f exp = do
     t <- traverseEXPR pos d exp
@@ -103,12 +104,17 @@ checkTYPE pos d f exp = do
         then return ()
         else printToError pos "Type mismatch"
 
+-- Checks if an array declaration is valid (l <= r)
+-- and prints an error if not.
 checkInvalidARRAY :: POS -> TYPE -> StateM ()
 checkInvalidARRAY pos (ARRAY l r) 
     | r < l     = printToError pos "Invalid array declaration, left limit is greater than ritght limit"
     | otherwise = return ()
 checkInvalidARRAY _ _ = return ()
 
+-- Traverses the given Abstract Syntatic Tree and 
+-- prints it with the respective Context Analysis
+-- with Symbols Tables
 traverseAST :: BLOCK -> StateM ()
 traverseAST block = do
     traverseBLOCK 0 block 
@@ -139,6 +145,7 @@ traverseDECS (SEQUENCED decs dec) = do
     traverseDECS decs
     traverseDEC dec
 
+-- Traverse declare and checks for redeclaration of variables
 traverseDEC :: DECLARE -> StateM ()
 traverseDEC dec = 
     case dec of
@@ -156,6 +163,7 @@ traverseDEC dec =
                 Just _ -> printToError pos $ "Variable: '" ++ id ++ 
                                              "' declared more than once in the same block"
 
+-- Traverse instructions
 traverseINSTS :: Int -> INSTRUCTIONS -> StateM ()
 traverseINSTS d (INST inst) = traverseINST d inst
 traverseINSTS d (SEQUENCE insts inst) = do
@@ -163,6 +171,7 @@ traverseINSTS d (SEQUENCE insts inst) = do
     traverseINSTS (d+1) insts
     traverseINST (d+1) inst
 
+-- Traverse instruction
 traverseINST :: Int -> INSTRUCTION -> StateM ()
 traverseINST d (BLOCKINST block) = traverseBLOCK d block
 traverseINST d (ASSIGNARRAY id exps pos) = do
@@ -200,7 +209,7 @@ traverseINST d (IFINST ifinst) = traverseIF d ifinst
 traverseINST d (DOINST doinst) = traverseDO d doinst
 traverseINST d (FORINST forinst) = traverseFOR d forinst
 
-
+-- Traverse Expression and returns its type (in the StateM monad)
 traverseEXPR :: POS -> Int -> EXPR -> StateM TYPE
 traverseEXPR _ d (SUM exp1 exp2 pos) = do
     printToBuffer d "Plus"
@@ -337,6 +346,7 @@ traverseEXPR _ d (NUM n) = do
     printToBuffer d $ "Literal: " ++ show n
     return INT
 
+-- Traverse printable expression
 traversePEXP :: POS -> Int -> PRINTEXP -> StateM ()
 traversePEXP pos d (CONCAT exp1 exp2) = do
     printToBuffer d "Concat"
@@ -348,16 +358,19 @@ traversePEXP pos d (PEXPR exp) = do
 traversePEXP _ d (STRINGLIT s) = 
     printToBuffer d $ "\"" ++ s ++ "\"" 
 
+-- Traverse IF node
 traverseIF :: Int -> IF -> StateM ()
 traverseIF d (IF gs) = do
     printToBuffer d "If"
     traverseGUARDS (d+1) gs
 
+-- Traverse DO node
 traverseDO :: Int -> DO -> StateM ()
 traverseDO d (DO gs) = do
     printToBuffer d "Do"
     traverseGUARDS (d+1) gs
 
+-- Traverse Guards for Do or If expression
 traverseGUARDS :: Int -> GUARDS -> StateM ()
 traverseGUARDS d (GUARDS exp insts pos) = do
     printToBuffer d "Guard"
@@ -367,6 +380,7 @@ traverseGUARDS d (GUARDSEQ g1 g2) = do
     traverseGUARDS d g1
     traverseGUARDS d g2
 
+-- Traverse FOR node
 traverseFOR :: Int -> FOR -> StateM ()
 traverseFOR d (FOR id exp1 exp2 block pos) = do
     printToBuffer d "For"
