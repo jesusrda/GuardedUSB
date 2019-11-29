@@ -113,3 +113,10 @@ instance Show Token where
     show TkEOF          = "TkEOF" 
 
 type TokenPos = (Token, Int, Int)
+
+getPos :: TokenPos -> (Int, Int)
+getPos (_,l,c) = (l,c)
+
+getString :: TokenPos -> String
+getString (TkId s, _, _) = s
+getString _ = undefined

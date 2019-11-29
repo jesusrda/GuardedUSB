@@ -66,7 +66,7 @@ import qualified AST
     ']|'        { (TkCloseBlock,_,_) }
 
     -- Other Tokens
-    varID       { (TkId $$,_,_) }
+    varID       { (TkId _,_,_) }
     n           { (TkNum $$,_,_) }
     s           { (TkString $$,_,_) }
     true        { (TkTrue,_,_) }
@@ -107,14 +107,14 @@ DECLARE : UNIQUETYPE                                    { $1 }
 
 -- Declare statement for a list of id's and only one type
 UNIQUETYPE :: { AST.DECLARE }
-UNIQUETYPE : varID ':' TYPE                             { let (_,row,col) = $2 in AST.UNIQUETYPE [$1] $3 (row,col) }
-           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t pos) -> AST.UNIQUETYPE ($1:vs) t pos) $3  }
+UNIQUETYPE : varID ':' TYPE                             { AST.UNIQUETYPE [getString $1] $3 (getPos $2) }
+           | varID ',' UNIQUETYPE                       { (\(AST.UNIQUETYPE vs t pos) -> AST.UNIQUETYPE ((getString $1):vs) t pos) $3  }
 
 -- Declare statement for a list of id's and a list of types
 -- One type for each id
 MULTITYPE :: { AST.DECLARE }
-MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { let (_,row,col) = $4 in AST.MULTITYPE ($1:$3:[]) ($7:$5:[]) (row,col) }
-          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE ($1:vs) ($5:ts) pos) $3 }
+MULTITYPE : varID ',' varID ':' TYPE ',' TYPE           { AST.MULTITYPE (map getString ($1:$3:[])) ($7:$5:[]) (getPos $4) }
+          | varID ',' MULTITYPE ',' TYPE                { (\(AST.MULTITYPE vs ts pos) -> AST.MULTITYPE ((getString $1):vs) ($5:ts) pos) $3 }
 
 -- Type declaration
 TYPE :: { AST.TYPE }
@@ -133,40 +133,40 @@ INSTRUCTIONS : INSTRUCTION                              { AST.INST $1 }
 -- Single instruction
 INSTRUCTION :: { AST.INSTRUCTION }
 INSTRUCTION : BLOCK                                     { AST.BLOCKINST $1 }
-            | varID ':=' EXPLIST                        { let (_,row,col) = $2 in AST.ASSIGNARRAY $1 (reverse $3) (row,col) }
-            | varID ':=' EXPR                           { let (_,row,col) = $2 in AST.ASSIGN $1 $3 (row,col) }
-            | read varID                                { let (_,row,col) = $1 in AST.READ $2 (row,col) }
-            | print PRINTEXP                            { let (_,row,col) = $1 in AST.PRINT $2 (row,col) }
-            | println PRINTEXP                          { let (_,row,col) = $1 in AST.PRINTLN $2 (row,col) }
+            | varID ':=' EXPLIST                        { AST.ASSIGNARRAY (getString $1) (reverse $3) (getPos $2) }
+            | varID ':=' EXPR                           { AST.ASSIGN (getString $1) $3 (getPos $2) }
+            | read varID                                { AST.READ (getString $2) (getPos $1) }
+            | print PRINTEXP                            { AST.PRINT $2 (getPos $1) }
+            | println PRINTEXP                          { AST.PRINTLN $2 (getPos $1) }
             | IF                                        { AST.IFINST $1 }
             | FOR                                       { AST.FORINST $1 }
             | DO                                        { AST.DOINST $1 }
 
 -- Arithmetic, boolean and array expressions
 EXPR :: { AST.EXPR }
-EXPR : EXPR '+' EXPR                                    { let (_,row,col) = $2 in AST.SUM $1 $3 (row,col) }
-     | EXPR '-' EXPR                                    { let (_,row,col) = $2 in AST.MINUS $1 $3 (row,col) }
-     | EXPR '*' EXPR                                    { let (_,row,col) = $2 in AST.MULT $1 $3 (row,col) }
-     | EXPR '/' EXPR                                    { let (_,row,col) = $2 in AST.DIV $1 $3 (row,col) }
-     | EXPR '%' EXPR                                    { let (_,row,col) = $2 in AST.MOD $1 $3 (row,col) }
-     | EXPR '[' EXPR ']'                                { let (_,row,col) = $2 in AST.ARRELEM $1 $3 (row,col) }
-     | EXPR '==' EXPR                                   { let (_,row,col) = $2 in AST.EQ $1 $3 (row,col) }
-     | EXPR '!=' EXPR                                   { let (_,row,col) = $2 in AST.NEQ $1 $3 (row,col) }
-     | EXPR '<=' EXPR                                   { let (_,row,col) = $2 in AST.LEQ $1 $3 (row,col)}
-     | EXPR '>=' EXPR                                   { let (_,row,col) = $2 in AST.GEQ $1 $3 (row,col) }
-     | EXPR '<' EXPR                                    { let (_,row,col) = $2 in AST.LESS $1 $3 (row,col) }
-     | EXPR '>' EXPR                                    { let (_,row,col) = $2 in AST.GREATER $1 $3 (row,col) }
-     | EXPR 'v' EXPR                                    { let (_,row,col) = $2 in AST.OR $1 $3 (row,col)}
-     | EXPR '^' EXPR                                    { let (_,row,col) = $2 in AST.AND $1 $3 (row,col) }
+EXPR : EXPR '+' EXPR                                    { AST.SUM $1 $3 (getPos $2) }
+     | EXPR '-' EXPR                                    { AST.MINUS $1 $3 (getPos $2) }
+     | EXPR '*' EXPR                                    { AST.MULT $1 $3 (getPos $2) }
+     | EXPR '/' EXPR                                    { AST.DIV $1 $3 (getPos $2) }
+     | EXPR '%' EXPR                                    { AST.MOD $1 $3 (getPos $2) }
+     | EXPR '[' EXPR ']'                                { AST.ARRELEM $1 $3 (getPos $2) }
+     | EXPR '==' EXPR                                   { AST.EQ $1 $3 (getPos $2) }
+     | EXPR '!=' EXPR                                   { AST.NEQ $1 $3 (getPos $2) }
+     | EXPR '<=' EXPR                                   { AST.LEQ $1 $3 (getPos $2) }
+     | EXPR '>=' EXPR                                   { AST.GEQ $1 $3 (getPos $2) }
+     | EXPR '<' EXPR                                    { AST.LESS $1 $3 (getPos $2) }
+     | EXPR '>' EXPR                                    { AST.GREATER $1 $3 (getPos $2) }
+     | EXPR 'v' EXPR                                    { AST.OR $1 $3 (getPos $2) }
+     | EXPR '^' EXPR                                    { AST.AND $1 $3 (getPos $2) }
      | '(' EXPR ')'                                     { $2 }
-     | '!' EXPR                                         { let (_,row,col) = $1 in AST.NOT $2 (row,col) }
-     | '-' EXPR %prec NEG                               { let (_,row,col) = $1 in AST.NEG $2 (row,col) }
-     | EXPR '(' EXPR ':' EXPR ')'                       { let (_,row,col) = $2 in AST.ARRAYMOD $1 $3 $5 (row,col) }
-     | size '(' EXPR ')'                                { let (_,row,col) = $1 in AST.SIZE $3 (row,col) }
-     | atoi '(' EXPR ')'                                { let (_,row,col) = $1 in AST.ATOI $3 (row,col) }
-     | min '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MIN $3 (row,col) }
-     | max '(' EXPR ')'                                 { let (_,row,col) = $1 in AST.MAX $3 (row,col) }
-     | varID                                            { AST.IDT $1 }
+     | '!' EXPR                                         { AST.NOT $2 (getPos $1) }
+     | '-' EXPR %prec NEG                               { AST.NEG $2 (getPos $1) }
+     | EXPR '(' EXPR ':' EXPR ')'                       { AST.ARRAYMOD $1 $3 $5 (getPos $2) }
+     | size '(' EXPR ')'                                { AST.SIZE $3 (getPos $1) }
+     | atoi '(' EXPR ')'                                { AST.ATOI $3 (getPos $1) }
+     | min '(' EXPR ')'                                 { AST.MIN $3 (getPos $1) }
+     | max '(' EXPR ')'                                 { AST.MAX $3 (getPos $1) }
+     | varID                                            { AST.IDT (getString $1) (getPos $1) }
      | false                                            { AST.FALSE }
      | true                                             { AST.TRUE }
      | n                                                { AST.NUM $1 }
@@ -192,11 +192,11 @@ DO : do GUARDS od                                       { AST.DO $2 }
 
 -- For statement
 FOR :: { AST.FOR }
-FOR : for varID in EXPR to EXPR '->' BLOCK rof          { let (_,row,col) = $1 in AST.FOR $2 $4 $6 $8 (row,col) }
+FOR : for varID in EXPR to EXPR '->' BLOCK rof          { AST.FOR (getString $2) $4 $6 $8 (getPos $1) }
 
 -- Guards with condition and instructions for if and do statements
 GUARDS :: { AST.GUARDS }
-GUARDS : EXPR '->' INSTRUCTIONS                         { let (_,row,col) = $2 in AST.GUARDS $1 $3 (row,col) }
+GUARDS : EXPR '->' INSTRUCTIONS                         { AST.GUARDS $1 $3 (getPos $2) }
        | GUARDS '[]' GUARDS                             { AST.GUARDSEQ $1 $3 }
 
 {

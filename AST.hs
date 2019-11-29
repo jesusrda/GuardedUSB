@@ -63,7 +63,7 @@ data EXPR = SUM EXPR EXPR POS
           | ATOI EXPR POS
           | MIN EXPR POS
           | MAX EXPR POS
-          | IDT String 
+          | IDT String POS
           | TRUE 
           | FALSE 
           | NUM Int 
