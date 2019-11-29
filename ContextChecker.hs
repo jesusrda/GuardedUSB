@@ -1,61 +1,9 @@
 module ContextChecker where
 
 import AST
+import SymTable
+import OurStateMonad
 import Control.Monad.State
-import qualified Data.Map as H
-
--- Symbol
-data Sym = VarSym {
-    symID :: ID,
-    symType :: TYPE
-}
-
--- Symbolic table 
-type SymTable = H.Map ID Sym
-
--- State
-data OurState = OurState {
-    tableStack :: [SymTable],
-    bufferAST :: Either String [String]
-}
-
--- State Monad
-type StateM a = StateT OurState IO a 
-
--- Create empty SymTable
-emptySymTable :: SymTable
-emptySymTable = H.empty
-
--- Insert in SymTable
-symTableInsert :: Sym -> SymTable -> SymTable
-symTableInsert s = H.insert (symID s) s 
-
--- Lookup in SymTable
-symTableLookup :: ID -> SymTable -> Maybe Sym
-symTableLookup = H.lookup
-
--- Lookup for ID in current state
-lookupID :: ID -> StateM (Maybe Sym)
-lookupID id = do
-    tStack <- gets tableStack
-    return $ stackLookup tStack
-    where
-        stackLookup [] = Nothing
-        stackLookup (t:ts) =
-            case symTableLookup id t of
-                Just s -> (Just s)
-                Nothing -> stackLookup ts
-
-stackPop :: StateM SymTable
-stackPop = do
-    (OurState (t:ts) buff) <- get
-    put $ OurState ts buff
-    return t
-
-stackPush :: SymTable -> StateM ()
-stackPush t = do
-    (OurState tStack buffer) <- get
-    put $ OurState (t : tStack) buffer
 
 -- Auxiliar function to push an error to the state
 printToError :: POS -> String -> StateM ()
@@ -92,7 +40,7 @@ printSymTable :: Int -> StateM ()
 printSymTable d = do
     printToBuffer d "Symbols Table"
     (t:_) <- gets tableStack
-    mapM_ (printToBuffer (d+1)) $ map printSym $ map snd $ H.toList t 
+    mapM_ (printToBuffer (d+1)) $ map printSym $ map snd $ symTableToList t 
     printToBuffer 0 ""
 
 -- Checks if an expression is of the expected type 

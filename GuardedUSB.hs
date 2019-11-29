@@ -5,6 +5,7 @@ import Parser
 import AST
 import ContextChecker
 import Control.Monad.State
+import OurStateMonad
 
 main = do
     f <- getArgs >>= return . head
