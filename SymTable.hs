@@ -5,13 +5,13 @@ import qualified Data.Map as H
 import Data.Array
 
 -- Value
-data Value = IntValue Int | BoolValue Bool | ArrayValue (Array Int Int)
+data SymValue = IntValue Int | BoolValue Bool | ArrayValue (Array Int Int) 
 
 -- Symbol
 data Sym = VarSym {
     symID :: ID,
     symType :: TYPE,
-    symValue :: Maybe Value
+    symValue :: Maybe SymValue
 }
 
 -- Symbolic table 
@@ -29,6 +29,14 @@ symTableInsert s = H.insert (symID s) s
 symTableLookup :: ID -> SymTable -> Maybe Sym
 symTableLookup = H.lookup
 
+-- Modify element with specified id
+symTableModify :: ID -> SymValue -> SymTable -> SymTable
+symTableModify id val = H.adjust (\s -> s{symValue = Just val}) id
+
 -- Convert symbols table to list
 symTableToList :: SymTable -> [(ID, Sym)]
 symTableToList = H.toList
+
+getIntVal :: SymValue -> Int 
+getIntVal (IntValue n) = n
+getIntVal _ = error "Trying to get int value from non IntValue constructor"

@@ -25,6 +25,20 @@ lookupID id = do
                 Just s -> (Just s)
                 Nothing -> stackLookup ts
 
+-- Assign value to variable with ID assuming ID is in Scope
+-- and there are no type conflicts
+putValue :: ID -> SymValue -> StateM ()
+putValue id val = do
+    state <- get
+    put $ state{tableStack = modifyStack $ tableStack state}
+    where
+        modifyStack [] = []
+        modifyStack (t:ts) = 
+            case symTableLookup id t of
+                Just _ -> let newT = symTableModify id val t
+                          in newT:ts 
+                Nothing -> t:modifyStack ts 
+
 stackPop :: StateM SymTable
 stackPop = do
     (OurState (t:ts) buff) <- get
