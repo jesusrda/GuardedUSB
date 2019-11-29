@@ -41,3 +41,24 @@ runINST (ASSIGNARRAY id exps _) = do
 runINST (ASSIGN id exp _) = do
     expVal <- runEXPR exp
     putValue id expVal 
+runINST (READ id pos) = do
+    inp <- liftIO getLine
+    sym <- lookupID id
+
+runEXPR :: EXPR -> StateM SymValue
+runEXPR = undefined
+
+runPEXP :: EXPR -> StateM String
+runPEXP = undefined
+
+runIF :: IF -> StateM ()
+runIF = undefined
+
+runDO :: DO -> StateM ()
+runDO = undefined 
+
+runGUARDS :: GUARDS -> StateM Bool
+runGUARDS = undefined
+
+runFOR :: FOR -> StateM ()
+runFOR = undefined
