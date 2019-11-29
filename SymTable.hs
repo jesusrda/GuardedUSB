@@ -2,11 +2,16 @@ module SymTable where
 
 import AST
 import qualified Data.Map as H
+import Data.Array
+
+-- Value
+data Value = IntValue Int | BoolValue Bool | ArrayValue (Array Int Int)
 
 -- Symbol
 data Sym = VarSym {
     symID :: ID,
-    symType :: TYPE
+    symType :: TYPE,
+    symValue :: Maybe Value
 }
 
 -- Symbolic table 
