@@ -4,7 +4,7 @@ import AST
 import SymTable 
 import OurStateMonad
 import Control.Monad.State
-import ContextChecker (traverseDECS)
+import ContextChecker (traverseAST, traverseDECS)
 import System.Exit
 import Data.Array
 import Text.Read 
@@ -24,7 +24,7 @@ readOfType pos INT = do
     inp <- liftIO getLine
     let val = readMaybe inp :: Maybe Int 
     case val of
-        Just v -> return $ IntValue v
+        Just v -> return $ Just $ IntValue v
         Nothing -> do 
             printError pos "Invalid input value"
             return Nothing
@@ -32,13 +32,13 @@ readOfType pos BOOL = do
     inp <- liftIO getLine
     let val = readMaybeBool inp 
     case val of
-        Just v -> return $ BoolValue v
+        Just v -> return $ Just $ BoolValue v
         Nothing -> do 
             printError pos "Invalid input value"
             return Nothing
 readOfType pos (ARRAY l r) = do
     inp <- liftIO getLine
-    let val = readMaybe ("[" ++ inp ++ "]") :: [Int]
+    let val = readMaybe ("[" ++ inp ++ "]") :: Maybe [Int]
     case val of 
         Just v -> do
             if length v == r - l + 1 
@@ -49,6 +49,14 @@ readOfType pos (ARRAY l r) = do
         Nothing -> do
             printError pos "Invalid input value"
             return Nothing
+
+runAST :: BLOCK -> StateM ()
+runAST block = do
+    traverseAST block
+    buffer <- gets bufferAST
+    case buffer of
+        Left err -> liftIO $ putStrLn err
+        Right _ -> runBLOCK block
 
 runBLOCK :: BLOCK -> StateM ()
 runBLOCK (BLOCK inst) = runINSTS inst
@@ -87,28 +95,16 @@ runINST (READ id pos) = do
                 Just v -> putValue id v
                 Nothing -> return ()
 runINST (PRINT pexp _) = do
-<<<<<<< HEAD
     str <- runPRINTEXP pexp
     liftIO $ putStr str
     return () 
 runINST (PRINTLN pexp _) = do
     str <- runPRINTEXP pexp
-=======
-    str <- runPEXP pexp
-    liftIO $ putStr str
-    return () 
-runINST (PRINTLN pexp _) = do
-    str <- runPEXP pexp
->>>>>>> 35b6f802fc97e93cdd152657bd2be0c46e8e6bf5
     liftIO $ putStrLn str
     return () 
 runINST (IFINST ifinst) = runIF ifinst
 runINST (DOINST doinst) = runDO doinst
 runINST (FORINST forinst) = runFOR forinst
-<<<<<<< HEAD
-
-=======
->>>>>>> 35b6f802fc97e93cdd152657bd2be0c46e8e6bf5
 
 runEXPR :: EXPR -> StateM SymValue
 runEXPR (SUM exp1 exp2 _) = do
