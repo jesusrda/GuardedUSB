@@ -30,9 +30,9 @@ runINSTS (SEQUENCE insts inst) = do
     runINST inst
 
 runINST :: INSTRUCTION -> StateM ()
-runINST (BLOCKINST block) = runBLOCK
+runINST (BLOCKINST block) = runBLOCK block
 runINST (ASSIGNARRAY id exps _) = do
-    expsVal <- mapM $ runEXPR exps
+    expsVal <- mapM runEXPR exps
     sym <- lookupID id
     case sym of
         Just s -> putValue id $ 
@@ -44,6 +44,25 @@ runINST (ASSIGN id exp _) = do
 runINST (READ id pos) = do
     inp <- liftIO getLine
     sym <- lookupID id
+    case sym of 
+        Nothing -> return ()
+        Just s -> do
+            val <- readOfType pos (symType s)
+            case val of 
+                Just v -> putValue id v
+                Nothing -> return ()
+runINST (PRINT pexp _) = do
+    str <- runPRINTEXP pexp
+    liftIO $ putStr str
+    return () 
+runINST (PRINTLN pexp _) = do
+    str <- runPRINTEXP pexp
+    liftIO $ putStrLn str
+    return () 
+runINST (IFINST ifinst) = runIF ifinst
+runINST (DOINST doinst) = runDO doinst
+runINST (FORINST forinst) = runFOR forinst
+
 
 runEXPR :: EXPR -> StateM SymValue
 runEXPR (SUM exp1 exp2 _) = do
@@ -65,7 +84,7 @@ runEXPR (DIV exp1 exp2 pos) = do
         0 -> do
             printError pos "Division by zero"
             return $ IntValue 0 -- Estaría bien poner un NULL aquí
-        n -> return $ IntValue $ getIntVal $ val1 'div' n
+        n -> return $ IntValue $ (getIntVal val1) `div` n
 runEXPR (MOD exp1 exp2 pos) = do
     val1 <- runEXPR exp1
     val2 <- runEXPR exp2
@@ -73,10 +92,10 @@ runEXPR (MOD exp1 exp2 pos) = do
         0 -> do
             printError pos "Division by zero"
             return $ IntValue 0 -- Estaría bien poner un NULL aquí
-        n -> return $ Intvalue $ getIntVal $ val1 'mod' n
+        n -> return $ IntValue $ (getIntVal val1) `mod` n
 runEXPR (ARRELEM exp1 exp2 pos) = do
     symArr <- runEXPR exp1
-    symIdx <- runExpr exp2
+    symIdx <- runEXPR exp2
     let arr = getArrayVal symArr
         idx = getIntVal symIdx
         (lo, up) = bounds arr in 
@@ -130,15 +149,15 @@ runEXPR (NOT exp _) = do
     return $ BoolValue $ not (getBoolVal val)
 runEXPR (NEG exp _) = do
     val <- runEXPR exp
-    return $ IntValue $ - (getIntValue val)
-runEXPR (ARRAYMOD exp1 exp2 exp3 _) = do
+    return $ IntValue $ - (getIntVal val)
+runEXPR (ARRAYMOD exp1 exp2 exp3 pos) = do
     symArr <- runEXPR exp1
     symIdx <- runEXPR exp2
     symInt <- runEXPR exp3
     let arr = getArrayVal symArr
         idx = getIntVal symIdx
         val = getIntVal symInt
-        (lo, up) = bounds arr in
+        (lo, hi) = bounds arr in
         if lo<=idx && idx<=hi then do
             return $ ArrayValue $ arr//[(idx,val)]
         else do
@@ -174,28 +193,36 @@ runEXPR TRUE = return $ BoolValue True
 runEXPR FALSE = return $ BoolValue False
 runEXPR (NUM n) = return $ IntValue n
 
+runPRINTEXP :: PRINTEXP -> StateM String
+runPRINTEXP (CONCAT p1 p2) = do
+    s1 <- runPRINTEXP p1
+    s2 <- runPRINTEXP p2
+    return (s1++s2)
+runPRINTEXP (PEXPR p) = runPEXP p
+runPRINTEXP (STRINGLIT s) = return s
+
 runPEXP :: EXPR -> StateM String
 runPEXP expr = do
     val <- runEXPR expr
     case val of 
         IntValue i -> return $ show i
         BoolValue b -> return $ show b
-        ArrayValue ar -> return $ showArray (fst (bounds ar)) (elems ar)
+        ArrayValue ar -> return $ arrayShow (fst (bounds ar)) (elems ar)
     where
-        showArray _ [a] = (show n) ++ ":" ++ (show a)
-        showArray n (a:as) = (show n) ++ ":" ++ (show a) ++ ", " ++ (showArray as)
+        arrayShow n (a:[]) = (show n) ++ ":" ++ (show a)
+        arrayShow n (a:as) = (show n) ++ ":" ++ (show a) ++ ", " ++ (arrayShow (n+1) as)
 
 runIF :: IF -> StateM ()
-runIF g = do
+runIF (IF g) = do
     b <- runGUARDS g
     return ()
 
 runDO :: DO -> StateM ()
-runDO g = do
+runDO (DO g) = do
     b <- runGUARDS g
     if b 
         then do
-            runDO g
+            runDO (DO g)
         else
             return ()
 
@@ -215,18 +242,16 @@ runGUARDS (GUARDSEQ g1 g2) = do
 
 runFOR :: FOR -> StateM ()
 runFOR (FOR id exp1 exp2 bl _) = do
-    i <- getIntVal $ runEXPR exp1
-    j <- getIntVal $ runEXPR exp2
+    i <- runEXPR exp1 >>= return . getIntVal
+    j <- runEXPR exp2 >>= return . getIntVal
     stackPush $ symTableInsert (VarSym id FORVAR Nothing) emptySymTable
     loop bl i j id
     stackPop
     return ()
-
-
-loop :: BLOCK -> Int -> Int -> String -> StateM ()
-loop bl i j id
-    | i > j = return ()
-    | otherwise = do
-        putValue id $ IntValue i
-        runBLOCK bl
-        loop bl (i+1) j id
+    where
+        loop bl i j id
+            | i > j = return ()
+            | otherwise = do
+                putValue id $ IntValue i
+                runBLOCK bl
+                loop bl (i+1) j id
