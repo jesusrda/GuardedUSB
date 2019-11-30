@@ -64,13 +64,7 @@ checkInvalidARRAY _ _ = return ()
 -- prints it with the respective Context Analysis
 -- with Symbols Tables
 traverseAST :: BLOCK -> StateM ()
-traverseAST block = do
-    traverseBLOCK 0 block 
-    buffer <- gets bufferAST
-    case buffer of
-        Left err -> liftIO $ print err
-        Right lns -> liftIO $ putStr $ unlines $ reverse lns
-    return ()
+traverseAST block = traverseBLOCK 0 block 
 
 -- Function to traverse block
 traverseBLOCK :: Int -> BLOCK -> StateM ()

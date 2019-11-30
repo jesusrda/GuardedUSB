@@ -6,6 +6,7 @@ import AST
 import ContextChecker
 import Control.Monad.State
 import OurStateMonad
+import RunAST
 
 main = do
     f <- getArgs >>= return . head
@@ -15,6 +16,6 @@ main = do
 	    case scanner s of
 	        Left s -> putStr s
 	        Right toks -> do
-                runStateT (traverseAST $ parse toks) (OurState [] (Right []))
+                runStateT (runAST $ parse toks) (OurState [] (Right []))
                 return ()
 	else putStrLn "Error: Wrong Filetype. Only .gusb files allowed"
