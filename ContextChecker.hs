@@ -337,6 +337,6 @@ traverseFOR d (FOR id exp1 exp2 block pos) = do
     checkTYPE pos (d+3) isINT exp1
     printToBuffer (d+2) "To"
     checkTYPE pos (d+3) isINT exp2
-    stackPush $ symTableInsert (VarSym id INT Nothing) emptySymTable
+    stackPush $ symTableInsert (VarSym id FORVAR Nothing) emptySymTable
     printSymTable (d+4)
     traverseBLOCK (d+4) block 
