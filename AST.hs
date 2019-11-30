@@ -105,6 +105,10 @@ isARRAYL :: Int -> TYPE -> Bool
 isARRAYL len (ARRAY l r) = (r - l + 1) == len
 isARRAYL _ _             = False
 
+getLimits :: TYPE -> (Int, Int)
+getLimits (ARRAY l r) = (l, r)
+getLimits _ = error "Trying to get limits of non-array type"
+
 -- Function used to print an identation space and then a string
 putStrIdent :: Int -> String -> IO ()
 putStrIdent n str = do replicateM_ n (putStr "  ")
