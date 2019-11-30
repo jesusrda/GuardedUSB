@@ -67,9 +67,6 @@ tokens :-
 <0>         \|\[                                {pushTk TkOpenBlock}
 <0>         \]\|                                {pushTk TkCloseBlock}
 
-        -- Identifiers
-<0>         $Alpha[$Alpha $digit \_]*          {pushId}
-
         -- Constants
 <0>         $digit+                             {pushNum}
 <0>         "true"                              {pushTk TkTrue}
@@ -83,6 +80,9 @@ tokens :-
 <stringSt>  \n+\r?\r+\n?                        {pushInvalidBreak}                      -- Invalid Break Lines                             
 <stringSt>  $printable                          {addCurrentChar}                        -- Insert any printable char to string
 <stringSt>  .                                   {pushInvalidNPrint}                     -- Invalid Not Printable chars
+
+        -- Identifiers
+<0>         $Alpha[$Alpha $digit \_]*          {pushId}
 
         -- Invalid characters
 <0>         .                                   {pushInvalid}  
