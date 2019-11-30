@@ -40,3 +40,11 @@ symTableToList = H.toList
 getIntVal :: SymValue -> Int 
 getIntVal (IntValue n) = n
 getIntVal _ = error "Trying to get int value from non IntValue constructor"
+
+getBoolVal :: SymValue -> Bool
+getBoolVal (BoolValue b) = b
+getBoolVal _ = error "Trying to get bool value from non BoolValue constructor"
+
+getArrayVal :: SymValue -> (Array Int Int) 
+getArrayVal (ArrayValue a) = a
+getArrayVal _ = error "Trying to get array value from non ArrayValue constructor"
