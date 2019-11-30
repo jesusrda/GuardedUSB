@@ -144,24 +144,24 @@ runEXPR (ARRAYMOD exp1 exp2 exp3 _) = do
         else do
             printError pos "Accessing array out of bounds"
             return $ IntValue 0 -- AQUI TAMBIEN LO DE LOS NULL
-runEXP (SIZE exp _) = do
+runEXPR (SIZE exp _) = do
     symArr <- runEXPR exp
     let (lo, up) = bounds $ getArrayVal symArr in
         return $ IntValue (up-lo+1)
-runEXP (ATOI exp _) = do
+runEXPR (ATOI exp _) = do
     symArr <- runEXPR exp
     let arr = getArrayVal symArr
         (lo, up) = bounds arr in
         return $ IntValue (arr!lo)
-runEXP (MIN exp _) = do
+runEXPR (MIN exp _) = do
     symArr <- runEXPR exp
     let (lo, up) = bounds $ getArrayVal symArr in
         return $ IntValue lo
-runEXP (MAX exp _) = do
+runEXPR (MAX exp _) = do
     symArr <- runEXPR exp
     let (lo, up) = bounds $ getArrayVal symArr in
         return $ IntValue up
-runEXP (IDT id pos) = do
+runEXPR (IDT id pos) = do
     sym <- lookupID id
     let (Just s) = sym in
         case symValue s of
@@ -170,9 +170,9 @@ runEXP (IDT id pos) = do
             Nothing -> do
                 printError pos "Attempting to use uninitialized variable"
                 return $ IntValue 0 -- Aqui tambien jejeps
-runEXP TRUE = return $ BoolValue True
-runEXP FALSE = return $ BoolValue False
-runEXP (NUM n) = return $ IntValue n
+runEXPR TRUE = return $ BoolValue True
+runEXPR FALSE = return $ BoolValue False
+runEXPR (NUM n) = return $ IntValue n
 
 runPEXP :: EXPR -> StateM String
 runPEXP expr = do
@@ -230,5 +230,3 @@ loop bl i j id
         putValue id $ IntValue i
         runBLOCK bl
         loop bl (i+1) j id
-        
-
