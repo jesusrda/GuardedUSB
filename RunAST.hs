@@ -7,12 +7,48 @@ import Control.Monad.State
 import ContextChecker (traverseDECS)
 import System.Exit
 import Data.Array
+import Text.Read 
 
 printError :: POS -> String -> StateM ()
 printError (l, c) str = do 
     liftIO $ putStrLn $ "\nException thrown near line " ++
                         show l ++ " column " ++ show c ++ ": " ++ str
     liftIO $ exitSuccess
+readMaybeBool :: String -> Maybe Bool
+readMaybeBool "true" = Just True
+readMaybeBool "false" = Just False
+readMaybeBool _ = Nothing 
+
+readOfType :: POS -> TYPE -> StateM (Maybe SymValue)
+readOfType pos INT = do
+    inp <- liftIO getLine
+    let val = readMaybe inp :: Maybe Int 
+    case val of
+        Just v -> return $ IntValue v
+        Nothing -> do 
+            printError pos "Invalid input value"
+            return Nothing
+readOfType pos BOOL = do
+    inp <- liftIO getLine
+    let val = readMaybeBool inp 
+    case val of
+        Just v -> return $ BoolValue v
+        Nothing -> do 
+            printError pos "Invalid input value"
+            return Nothing
+readOfType pos (ARRAY l r) = do
+    inp <- liftIO getLine
+    let val = readMaybe ("[" ++ inp ++ "]") :: [Int]
+    case val of 
+        Just v -> do
+            if length v == r - l + 1 
+                then return $ Just $ ArrayValue $ listArray (l, r) v 
+                else do
+                    printError pos "Invalid input value (array lenght doesn't match)"
+                    return Nothing
+        Nothing -> do
+            printError pos "Invalid input value"
+            return Nothing
 
 runBLOCK :: BLOCK -> StateM ()
 runBLOCK (BLOCK inst) = runINSTS inst
@@ -27,7 +63,7 @@ runINSTS :: INSTRUCTIONS -> StateM ()
 runINSTS (INST inst) = runINST inst
 runINSTS (SEQUENCE insts inst) = do
     runINSTS insts
-    runINST inst
+    runINST inst    
 
 runINST :: INSTRUCTION -> StateM ()
 runINST (BLOCKINST block) = runBLOCK block
@@ -42,7 +78,6 @@ runINST (ASSIGN id exp _) = do
     expVal <- runEXPR exp
     putValue id expVal 
 runINST (READ id pos) = do
-    inp <- liftIO getLine
     sym <- lookupID id
     case sym of 
         Nothing -> return ()
@@ -52,17 +87,28 @@ runINST (READ id pos) = do
                 Just v -> putValue id v
                 Nothing -> return ()
 runINST (PRINT pexp _) = do
+<<<<<<< HEAD
     str <- runPRINTEXP pexp
     liftIO $ putStr str
     return () 
 runINST (PRINTLN pexp _) = do
     str <- runPRINTEXP pexp
+=======
+    str <- runPEXP pexp
+    liftIO $ putStr str
+    return () 
+runINST (PRINTLN pexp _) = do
+    str <- runPEXP pexp
+>>>>>>> 35b6f802fc97e93cdd152657bd2be0c46e8e6bf5
     liftIO $ putStrLn str
     return () 
 runINST (IFINST ifinst) = runIF ifinst
 runINST (DOINST doinst) = runDO doinst
 runINST (FORINST forinst) = runFOR forinst
+<<<<<<< HEAD
 
+=======
+>>>>>>> 35b6f802fc97e93cdd152657bd2be0c46e8e6bf5
 
 runEXPR :: EXPR -> StateM SymValue
 runEXPR (SUM exp1 exp2 _) = do
@@ -225,7 +271,7 @@ runDO (DO g) = do
             runDO (DO g)
         else
             return ()
-
+            
 runGUARDS :: GUARDS -> StateM Bool
 runGUARDS (GUARDS exp insts _) = do
     cond <- runEXPR exp 
