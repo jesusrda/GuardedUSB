@@ -49,13 +49,29 @@ runEXPR :: EXPR -> StateM SymValue
 runEXPR = undefined
 
 runPEXP :: EXPR -> StateM String
-runPEXP s = undefined
+runPEXP expr = do
+    val <- runEXPR expr
+    case val of 
+        IntValue i -> return $ show i
+        BoolValue b -> return $ show b
+        ArrayValue ar -> return $ showArray (fst (bounds ar)) (elems ar)
+    where
+        showArray _ [a] = (show n) ++ ":" ++ (show a)
+        showArray n (a:as) = (show n) ++ ":" ++ (show a) ++ ", " ++ (showArray as)
 
 runIF :: IF -> StateM ()
-runIF g = undefined
+runIF g = do
+    b <- runGUARDS g
+    return ()
 
 runDO :: DO -> StateM ()
-runDO = undefined 
+runDO g = do
+    b <- runGUARDS g
+    if b 
+        then do
+            runDO g
+        else
+            return ()
 
 runGUARDS :: GUARDS -> StateM Bool
 runGUARDS (GUARDS exp insts _) = do
@@ -72,4 +88,21 @@ runGUARDS (GUARDSEQ g1 g2) = do
         else runGUARDS g2
 
 runFOR :: FOR -> StateM ()
-runFOR = undefined
+runFOR (FOR id exp1 exp2 bl _) = do
+    i <- getIntVal $ runEXPR exp1
+    j <- getIntVal $ runEXPR exp2
+    stackPush $ symTableInsert (VarSym id FORVAR Nothing) emptySymTable
+    loop bl i j id
+    stackPop
+    return ()
+
+
+loop :: BLOCK -> Int -> Int -> String -> StateM ()
+loop bl i j id
+    | i > j = return ()
+    | otherwise = do
+        putValue id $ IntValue i
+        runBLOCK bl
+        loop bl (i+1) j id
+        
+
