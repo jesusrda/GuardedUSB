@@ -37,6 +37,11 @@ symTableModify id val = H.adjust (\s -> s{symValue = Just val}) id
 symTableToList :: SymTable -> [(ID, Sym)]
 symTableToList = H.toList
 
+symValueType :: SymValue -> TYPE
+symValueType IntValue _ = INT
+symValueType BoolValue _ = BOOL
+symValueType ArrayValue _ = ARRAY 0 0
+
 getIntVal :: SymValue -> Int 
 getIntVal (IntValue n) = n
 getIntVal _ = error "Trying to get int value from non IntValue constructor"
