@@ -58,7 +58,18 @@ runDO :: DO -> StateM ()
 runDO = undefined 
 
 runGUARDS :: GUARDS -> StateM Bool
-runGUARDS = undefined
+runGUARDS (GUARDS exp insts _) = do
+    cond <- runEXPR exp 
+    if getBoolVal cond 
+        then do 
+            runINSTS insts 
+            return True 
+        else return False 
+runGUARDS (GUARDSEQ g1 g2) = do
+    done <- runGUARDS g1
+    if done 
+        then return True 
+        else runGUARDS g2
 
 runFOR :: FOR -> StateM ()
 runFOR = undefined
